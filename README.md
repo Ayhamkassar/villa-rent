@@ -36,18 +36,18 @@ A full-stack web application that allows users to **rent or sell farms**, built 
 
 ## 📂 Project Structure
 project-root/
-│── server/ # Backend code (Node + Express)
-│ ├── Models/ # Database models (Mongoose Schemas)
-│ ├── Routes/ # API routes
-│ └── server.js # Server entry point
-│
-│── client/ # Frontend code (React)
-│ ├── src/
-│ │ ├── components/ # Reusable components
-│ │ ├── pages/ # Application pages
-│ │ └── App.js # Main React component
-│
-│── README.md
+- │── server/ # Backend code (Node + Express)
+- │ ├── Models/ # Database models (Mongoose Schemas)
+- │ ├── Routes/ # API routes
+- │ └── server.js # Server entry point
+- │
+- │── client/ # Frontend code (React)
+- │ ├── src/
+- │ │ ├── components/ # Reusable components
+- │ │ ├── pages/ # Application pages
+- │ │ └── App.js # Main React component
+- │
+- │── README.md
 
 ---
 
