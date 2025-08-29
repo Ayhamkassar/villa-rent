@@ -1,50 +1,92 @@
-# Welcome to your Expo app 👋
+# 🏡 Farm Rental & Sales Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A full-stack web application that allows users to **rent or sell farms**, built using the **MERN Stack** (MongoDB, Express.js, React, Node.js).
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Features
 
-   ```bash
-   npm install
-   ```
+- 👨‍🌾 Add new farms with details (name, description, images, location, contact number).
+- 🔍 Search farms by **name or status (For Sale / For Rent / All)**.
+- 📷 Upload and store farm images in the database.
+- 🛡️ User authentication system (Sign Up / Login / Logout).
+- 👤 User profile page with editable information.
+- 📱 Responsive design for desktop and mobile devices.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🛠️ Technologies Used
 
-In the output, you'll find options to open the app in a
+### **Backend**
+- [Node.js](https://nodejs.org/)
+- [Express.js](https://expressjs.com/)
+- [MongoDB](https://www.mongodb.com/) with [Mongoose](https://mongoosejs.com/)
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### **Frontend**
+- [React](https://reactjs.org/)
+- [Axios](https://axios-http.com/)
+- [React Router](https://reactrouter.com/)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### **Others**
+- [JWT](https://jwt.io/) for authentication
+- [Multer](https://github.com/expressjs/multer) for image upload
+- [Bcrypt.js](https://github.com/dcodeIO/bcrypt.js) for password hashing
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 📂 Project Structure
+project-root/
+│── server/ # Backend code (Node + Express)
+│ ├── Models/ # Database models (Mongoose Schemas)
+│ ├── Routes/ # API routes
+│ └── server.js # Server entry point
+│
+│── client/ # Frontend code (React)
+│ ├── src/
+│ │ ├── components/ # Reusable components
+│ │ ├── pages/ # Application pages
+│ │ └── App.js # Main React component
+│
+│── README.md
 
-```bash
-npm run reset-project
-```
+---
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## ⚙️ How to Run the Project
 
-## Learn more
+### 1. Clone the repository
+``bash
+git clone https://github.com/username/farm-rent-sale.git
+cd farm-rent-sale
 
-To learn more about developing your project with Expo, look at the following resources:
+### 2. Install dependencies
+# Backend
+cd server
+npm install
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# Frontend
+cd ../client
+npm install
+ ### 3. Setup Environment Variables
 
-## Join the community
+Create a .env file inside the server folder with the following:
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secret_key
+PORT=3000
 
-Join our community of developers creating universal apps.
+### 4. Start the application
+# Start Backend
+cd server
+npm start
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# Start Frontend
+cd client
+npm start
+### 👨‍💻 Developer
+
+Name: Mohammad Ayham Kassar
+
+📧 Email: kassaeraeham067@gmail.com
+
+🌐 GitHub : https://github.com/Ayhamkassar
+
+
