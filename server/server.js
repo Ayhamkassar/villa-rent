@@ -131,7 +131,7 @@ app.post('/api/register', async (req, res) => {
       from: 'myvilla234@gmail.com',
       to: email,
       subject: 'تفعيل الحساب',
-      text: `مرحبا ${name},\n\nاضغط الرابط لتفعيل حسابك:\nhttp://192.168.1.5:3000/api/verify/${verificationToken}\n\n`
+      text: `مرحبا ${name},\n\nاضغط الرابط لتفعيل حسابك:\n${API_URL}/api/verify/${verificationToken}\n\n`
     };
 
    await transporter.sendMail(mailOptions, (error, info) => {

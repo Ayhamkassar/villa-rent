@@ -1,1 +1,2 @@
-export const API_URL = "http://192.168.1.5:3000";
+const API_URL = "https://api-villa-rent.onrender.com";
+module.exports = { API_URL };

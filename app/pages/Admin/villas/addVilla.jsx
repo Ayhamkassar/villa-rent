@@ -252,6 +252,28 @@ export default function AddFarm() {
               value={formData.price}
               onChangeText={(text) => handleChange("price", text)}
             />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="عدد الضيوف"
+              keyboardType="numeric"
+              value={formData.guests}
+              onChangeText={(text) => handleChange("guests", text)}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="عدد غرف النوم"
+              keyboardType="numeric"
+              value={formData.bedrooms}
+              onChangeText={(text) => handleChange("bedrooms", text)}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="عدد الحمامات"
+              keyboardType="numeric"
+              value={formData.bathrooms}
+              onChangeText={(text) => handleChange("bathrooms", text)}
+            />
           </>
         )}
 

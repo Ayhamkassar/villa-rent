@@ -70,7 +70,7 @@ export default function UsersScreen() {
       <Text style={styles.name}>{item.name}</Text>
       <Text style={styles.email}>{item.email}</Text>
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.viewButton} onPress={() => router.push({ pathname: '/pages/Admin/UserDetails', params: { id: item._id } })}>
+        <TouchableOpacity style={styles.viewButton} onPress={() => router.push({ pathname: '/pages/Admin/users/UserDetails', params: { id: item._id } })}>
           <Text style={styles.viewText}>عرض</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.deleteButton} onPress={() => confirmAndDeleteUser(item._id)}>

@@ -28,7 +28,7 @@ const LoginScreen = () => {
 
       // التوجيه حسب الصلاحية
       if (user.isAdmin) {
-        router.replace('/pages/Admin/addVilla');
+        router.replace('/pages/Admin/villas/addVilla');
       } else {
         router.replace('/pages/mainScreens/profile');
       }

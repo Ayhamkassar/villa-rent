@@ -1,6 +1,5 @@
 // app/_layout.js
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -15,7 +14,7 @@ export default function Layout() {
       }}
     >
       <Tabs.Screen
-        name="addVilla"
+        name="villas/addVilla"
         options={{
           title: 'إضافة مزرعة',
           tabBarIcon: ({ color, size }) => (
@@ -24,7 +23,7 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
-        name="VillasList"
+        name="villas/VillasList"
         options={{
           title: 'قائمة المزارع',
           tabBarIcon: ({ color, size }) => (
@@ -33,7 +32,7 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
-        name="editVilla"
+        name="villas/editVilla"
         options={{
           href: null,
           title: 'تعديل مزرعة',
@@ -43,21 +42,21 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
-        name="UserDetails"
+        name="users/UserDetails"
         options={{
           href: null,
           title: 'تفاصيل مستخدم',
         }}
       />
       <Tabs.Screen
-        name="VillaDetails"
+        name="villas/VillaDetails"
         options={{
           href: null,
           title: 'تفاصيل مزرعة',
         }}
       />
       <Tabs.Screen
-        name="displayUsers"
+        name="users/displayUsers"
         options={{
           title: 'المستخدمون',
           tabBarIcon: ({ color, size }) => (

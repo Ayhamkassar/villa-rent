@@ -15,7 +15,6 @@ import {
 import { useRouter } from "expo-router";
 import axios from "axios";
 import { API_URL } from "@/server/config";
-
 import FarmListBG from "../../../assets/images/FarmListBG.png";
 
 const FarmListScreen = () => {
@@ -78,7 +77,7 @@ const FarmListScreen = () => {
       <View style={styles.cardContent}>
         <Text style={styles.title}>{item.name}</Text>
         {item.type === "rent" ? (
-          <Text style={styles.price}>{item.price || "-"} ليرة</Text>
+          <Text style={styles.price}>{item.weekendPrice || "-"} ليرة</Text>
         ) : (
           <Text style={styles.price}>{item.price || "-"} دولار</Text>
         )}

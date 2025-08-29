@@ -16,7 +16,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@/server/config";
 
-import FarmListBG from "../../../assets/images/FarmListBG.png";
+import FarmListBG from "../../../../assets/images/FarmListBG.png";
 
 export default function VillasList() {
   const router = useRouter();
@@ -105,7 +105,7 @@ export default function VillasList() {
   };
 
   const renderFarm = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => router.push({ pathname: "/pages/Admin/VillaDetails", params: { id: item._id } })}>
+    <TouchableOpacity style={styles.card} onPress={() => router.push({ pathname: "/pages/Admin/villas/VillaDetails", params: { id: item._id } })}>
       <Image
         source={{
           uri:
@@ -130,7 +130,7 @@ export default function VillasList() {
       </View>
       {isAdmin && (
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.editButton} onPress={() => router.push({ pathname: "/pages/Admin/editVilla", params: { id: item._id } })}>
+          <TouchableOpacity style={styles.editButton} onPress={() => router.push({ pathname: "/pages/Admin/villas/editVilla", params: { id: item._id } })}>
             <Text style={styles.editText}>تعديل</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.deleteButton} onPress={() => confirmAndDelete(item._id)}>

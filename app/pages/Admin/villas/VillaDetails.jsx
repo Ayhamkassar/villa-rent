@@ -39,9 +39,6 @@ export default function VillaDetails() {
   return (
     <LinearGradient colors={['#a8edea', '#fed6e3']} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backText}>رجوع</Text>
-        </TouchableOpacity>
         {images.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
             {images.map((imgUri, index) => (
@@ -94,6 +91,18 @@ export default function VillaDetails() {
               <View style={styles.detailRow}>
                 <MaterialCommunityIcons name="ruler" size={24} color="#0077b6" />
                 <Text style={styles.detailText}>المساحة (هكتار): {villa?.sizeInHectares || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="account-group" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>عدد الضيوف: {villa?.guests || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="bed-king-outline" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>غرف النوم: {villa?.bedrooms || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="shower" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>الحمامات: {villa?.bathrooms || '-'}</Text>
               </View>
             </>
           )}

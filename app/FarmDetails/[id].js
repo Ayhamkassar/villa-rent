@@ -25,6 +25,20 @@ export default function FarmDetails() {
       try {
         const response = await axios.get(`${API_URL}/api/farms/${id}`);
         setFarm(response.data);
+
+      const booked = {};
+      response.data.bookings?.forEach(booking => {
+        const current = new Date(booking.from);
+        const last = new Date(booking.to);
+
+        while (current <= last){
+          const dateStr = current.toISOString().split('T')[0];
+          booked[dateStr] = {disabled : true,disableTouchEvent: true,color:'red',textColor : 'white'};
+          current.setDate(current.getDate()+1)
+        }
+      });
+
+      setMarkedDates(booked)
       } catch (err) {
         setError(err.response?.data?.message || 'خطأ في جلب بيانات المزرعة');
       } finally {
@@ -44,20 +58,53 @@ export default function FarmDetails() {
       current.setDate(current.getDate() + 1);
     }
     return range;
-  };
-
-  const onDayPress = (day) => {
-    if (!fromDate || (fromDate && toDate)) {
-      // أول كبسة = بداية جديدة
+  };const onDayPress = (day) => {
+    // لو اليوم محجوز، ما نسمح بالضغط
+    if (markedDates[day.dateString]?.disabled) return;
+  
+    // إذا سبق الاختيار (بداية ونهاية)، وإضغط على أي يوم جديد => إعادة الاختيار
+    if (fromDate && toDate) {
       setFromDate(day.dateString);
       setToDate(null);
-      setMarkedDates({
-        [day.dateString]: { startingDay: true, color: '#0077b6', textColor: 'white' }
+  
+      // إعادة تلوين الأيام المحجوزة فقط
+      const booked = {};
+      farm.bookings?.forEach(booking => {
+        const current = new Date(booking.from);
+        const last = new Date(booking.to);
+  
+        while (current <= last) {
+          const dateStr = current.toISOString().split('T')[0];
+          booked[dateStr] = { disabled: true, disableTouchEvent: true, color: 'red', textColor: 'white' };
+          current.setDate(current.getDate() + 1);
+        }
       });
+  
+      // إضافة اليوم الجديد كبداية
+      booked[day.dateString] = { startingDay: true, color: '#0077b6', textColor: 'white' };
+      setMarkedDates(booked);
+      return;
+    }
+  
+    if (!fromDate) {
+      setFromDate(day.dateString);
+      setMarkedDates(prev => ({
+        ...prev,
+        [day.dateString]: { startingDay: true, color: '#0077b6', textColor: 'white' }
+      }));
     } else {
-      // كبسة تانية = نهاية الفترة
       const range = getDatesRange(fromDate, day.dateString);
-      const marked = {};
+      const marked = { ...markedDates };
+  
+      let validRange = true;
+      range.forEach(date => {
+        if (marked[date]?.disabled) validRange = false;
+      });
+  
+      if (!validRange) {
+        return Alert.alert('خطأ', 'الفترة المختارة تحتوي على أيام محجوزة');
+      }
+  
       range.forEach((date, index) => {
         if (index === 0) {
           marked[date] = { startingDay: true, color: '#0077b6', textColor: 'white' };
@@ -67,14 +114,17 @@ export default function FarmDetails() {
           marked[date] = { color: '#90e0ef', textColor: 'white' };
         }
       });
+  
       setMarkedDates(marked);
       setToDate(day.dateString);
     }
   };
+  
+  
 
   const handleBooking = async () => {
     if (!fromDate || !toDate) {
-      return Alert.alert('خطأ', 'يرجى اختيار فترة من – إلى من الكالندر');
+      return Alert.alert('خطأ', 'يرجى اختيار فترة (من – إلى) من التقويم');
     }
 
     try {
@@ -187,8 +237,24 @@ export default function FarmDetails() {
           {farm?.type === 'sale' && (
             <View style={styles.detailRow}>
               <MaterialCommunityIcons name="currency-usd" size={24} color="#0077b6" />
+              <View style={styles.detailRow}>
               <Text style={styles.detailText}>السعر: {farm?.price || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
               <Text style={styles.detailText}>المساحة : {farm?.sizeInHectars || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="account-group" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>عدد الضيوف: {farm?.guests || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="bed-king-outline" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>غرف النوم: {farm?.bedrooms || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="shower" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>الحمامات: {farm?.bathrooms || '-'}</Text>
+              </View>
             </View>
           )}
         </View>
