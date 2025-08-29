@@ -55,8 +55,8 @@ project-root/
 
 ### 1. Clone the repository
 ``bash
-git clone https://github.com/username/farm-rent-sale.git
-cd farm-rent-sale
+git clone https://github.com/Ayhamkassar/villa-rent.git
+cd villa-rent
 
 ### 2. Install dependencies
 # Backend
