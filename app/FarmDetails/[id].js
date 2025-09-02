@@ -212,6 +212,18 @@ export default function FarmDetails() {
           {farm?.type === 'rent' && (
             <>
               <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="clock-outline" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>
+                  وقت بدء الحجز: {farm?.startBookingTime || '-'}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="clock-outline" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>
+                  وقت نهاية الحجز: {farm?.endBookingTime || '-'}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
                 <MaterialCommunityIcons name="account-group" size={24} color="#0077b6" />
                 <Text style={styles.detailText}>عدد الضيوف: {farm?.guests || '-'}</Text>
               </View>
@@ -235,13 +247,26 @@ export default function FarmDetails() {
           )}
 
           {farm?.type === 'sale' && (
-            <View style={styles.detailRow}>
-              <MaterialCommunityIcons name="currency-usd" size={24} color="#0077b6" />
+            <>
               <View style={styles.detailRow}>
-              <Text style={styles.detailText}>السعر: {farm?.price || '-'}</Text>
+                <MaterialCommunityIcons name="clock-outline" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>
+                  وقت بدء الحجز: {farm?.startBookingTime || '-'}
+                </Text>
               </View>
               <View style={styles.detailRow}>
-              <Text style={styles.detailText}>المساحة : {farm?.sizeInHectars || '-'}</Text>
+                <MaterialCommunityIcons name="clock-outline" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>
+                  وقت نهاية الحجز: {farm?.endBookingTime || '-'}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="currency-usd" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>السعر: {farm?.price || '-'}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <MaterialCommunityIcons name="ruler" size={24} color="#0077b6" />
+                <Text style={styles.detailText}>المساحة : {farm?.sizeInHectars || '-'}</Text>
               </View>
               <View style={styles.detailRow}>
                 <MaterialCommunityIcons name="account-group" size={24} color="#0077b6" />
@@ -255,7 +280,7 @@ export default function FarmDetails() {
                 <MaterialCommunityIcons name="shower" size={24} color="#0077b6" />
                 <Text style={styles.detailText}>الحمامات: {farm?.bathrooms || '-'}</Text>
               </View>
-            </View>
+            </>
           )}
         </View>
 

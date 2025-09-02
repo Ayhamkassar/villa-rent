@@ -280,7 +280,7 @@ app.post('/api/villa', upload.array('images', 10), async (req, res) => {
   try {
     const {
       name, price, description, type, status, available, address,
-      guests, bedrooms, bathrooms, weekendPrice, midweekPrice, sizeInHectares, ownerId, contactNumber
+      guests, bedrooms, bathrooms, weekendPrice, midweekPrice, sizeInHectares, ownerId, contactNumber, startBookingTime, endBookingTime
     } = req.body;
 
     if (!name || !description) {
@@ -329,7 +329,9 @@ app.post('/api/villa', upload.array('images', 10), async (req, res) => {
       midweekPrice: midweekPrice ? Number(midweekPrice) : undefined,
       sizeInHectares: type === 'sale' ? (sizeInHectares ? Number(sizeInHectares) : 0) : undefined,
       ownerId: ownerId || null,
-      contactNumber: contactNumber || ""
+      contactNumber: contactNumber || "",
+      startBookingTime: startBookingTime || "00:00",
+      endBookingTime: endBookingTime || "23:59"
     });
 
     await newFarm.save();
@@ -614,6 +616,29 @@ app.get('/api/users/:id', async (req, res) => {
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+// =====================
+// جلب كل الحجوزات لمزرعة واحدة
+// =====================
+app.get('/api/bookings', async (req, res) => {
+  try {
+    const { villaId } = req.body;
+    if (!villaId) {
+      return res.status(400).json({ message: 'يرجى تحديد villaId' });
+    }
+    const farm = await Farm.findById(villaId).populate('bookings.userId', 'name email');
+    if (!farm) {
+      return res.status(404).json({ message: 'المزرعة غير موجودة' });
+    }
+    // If you want to include user info, map it here
+    const bookings = (farm.bookings || []).map(b => ({
+      ...b._doc,
+      user: b.userId, // populated user object
+    }));
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب الحجوزات', error: err.message });
   }
 });
 

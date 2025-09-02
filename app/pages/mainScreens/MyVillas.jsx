@@ -67,7 +67,7 @@ export default function MyVillas() {
   };
 
   const renderFarm = ({ item }) => (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={() => router.push({ pathname: "/pages/mainScreens/VillaDetails", params: { id: item._id } })}>
       <Image
         source={{
           uri:
@@ -82,7 +82,7 @@ export default function MyVillas() {
       <View style={styles.cardContent}>
         <Text style={styles.title}>{item.name}</Text>
         {item.type === "rent" ? (
-          <Text style={styles.price}>{item.price || "-"} ليرة</Text>
+          <Text style={styles.price}>{item.midweekPrice || "-"} ليرة</Text>
         ) : (
           <Text style={styles.price}>{item.price || "-"} ليرة</Text>
         )}
@@ -96,7 +96,7 @@ export default function MyVillas() {
       >
         <Text style={styles.editText}>تعديل</Text>
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading && !refreshing) {

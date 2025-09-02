@@ -54,6 +54,8 @@ bookings: [
     totalPrice: Number
   }
 ],
+startBookingTime: { type: String, required: true }, // or Date if you want full datetime
+endBookingTime: { type: String, required: true },
 ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 sizeInHectares: { type: Number },
 guests: { type: Number, default: 1 },          // عدد الضيوف

@@ -28,6 +28,13 @@ export default function Layout() {
           title: 'تعديل مزرعتي',
         }}
       />
+            <Tabs.Screen
+        name="VillaDetails"
+        options={{
+          href: null,
+          title: 'مزارعي',
+        }}
+      />
       <Tabs.Screen
         name="MyVillas"
         options={{

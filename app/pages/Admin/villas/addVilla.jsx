@@ -36,6 +36,8 @@ export default function AddFarm() {
     weekendPrice: "",
     ownerId: "",
     contactNumber: "",
+    startBookingTime: "",
+    endBookingTime: "",
   });
   useEffect(() => {
     if (formData.type === "rent") {
@@ -141,7 +143,8 @@ export default function AddFarm() {
     data.append("ownerId", formData.ownerId);
     data.append("contactNumber", formData.contactNumber || "");
     if (formData.type === "sale") data.append("sizeInHectares", formData.sizeInHectares || 0);
-  
+    data.append("startBookingTime", formData.startBookingTime || "");
+    data.append("endBookingTime", formData.endBookingTime || "");
     formData.images.forEach((image, index) => {
       data.append("images", {
         uri: Platform.OS === "android" ? image.uri : image.uri.replace("file://", ""),
@@ -173,6 +176,8 @@ export default function AddFarm() {
         midweekPrice: "",
         weekendPrice: "",
         ownerId: "",
+        startBookingTime: "",
+        endBookingTime: "",
       });
     } catch (error) {
       console.error(error.response?.data || error.message);
@@ -314,6 +319,18 @@ export default function AddFarm() {
               value={formData.weekendPrice}
               onChangeText={(text) => handleChange("weekendPrice", text)}
             />
+            <TextInput
+  value={formData.startBookingTime}
+  onChangeText={(text) => handleChange("startBookingTime", text)}
+  placeholder="وقت بدء الحجز, مثال: 14:00"
+  keyboardType="numeric"
+/>
+<TextInput
+  value={formData.endBookingTime}
+  onChangeText={(text) => handleChange("endBookingTime", text)}
+  placeholder="وقت نهاية الحجز, مثال: 22:00"
+  keyboardType="numeric"
+/>
           </>
         )}
 

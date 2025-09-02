@@ -18,7 +18,6 @@ export default function VillaDetails() {
     (async () => {
       try {
         const { data } = await axios.get(`${API_URL}/api/farms/${id}`);
-        
         setVilla(data);
       } catch (err) {
         Alert.alert('خطأ', 'تعذر تحميل بيانات المزرعة');
@@ -31,7 +30,6 @@ export default function VillaDetails() {
 
   useEffect(() => {
     if (!id) return;
-    
     setBookingsLoading(true);
     axios.get(`${API_URL}/api/bookings?villaId=${id}`)
       .then(res => setBookings(res.data))
@@ -128,13 +126,12 @@ export default function VillaDetails() {
         {bookingsLoading ? (
           <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
         ) : bookings.length === 0 ? (
-          
           <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
         ) : (
           bookings.map((booking, idx) => (
             <View key={booking._id || idx} style={styles.bookingItem}>
               <Text style={styles.bookingText}>الحجز بواسطة: {booking.userName || booking.user?.name || '-'}</Text>
-              <Text style={styles.bookingText}>من: {booking.startDate ? new Date(booking.startDate).toLocaleDateString() : '-'} إلى: {booking.endDate ? new Date(booking.endDate).toLocaleDateString() : '-'}</Text>
+              <Text style={styles.bookingText}>من: {booking.from ? new Date(booking.from).toLocaleDateString() : '-'} إلى: {booking.to ? new Date(booking.to).toLocaleDateString() : '-'}</Text>
               {booking.status && <Text style={styles.bookingText}>الحالة: {booking.status}</Text>}
             </View>
           ))

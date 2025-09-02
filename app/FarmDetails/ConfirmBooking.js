@@ -33,11 +33,11 @@ export default function ConfirmBooking() {
     <View style={styles.container}>
       <Text style={styles.title}>تأكيد الحجز</Text>
       <Text style={styles.text}>
-  تاريخ البداية: {new Date(fromDate).toLocaleDateString()} {new Date(fromDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+  تاريخ البداية: {new Date(fromDate).toLocaleDateString()}
 </Text>
 
 <Text style={styles.text}>
-  تاريخ النهاية: {new Date(toDate).toLocaleDateString()} {new Date(toDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+  تاريخ النهاية: {new Date(toDate).toLocaleDateString()}
 </Text>
 
       <Text style={styles.text}>السعر الإجمالي: {quote || '-'}</Text>

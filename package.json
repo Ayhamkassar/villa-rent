@@ -1,7 +1,7 @@
 {
   "name": "villa-rent",
-  "version": "1.0.0",
   "main": "server.js",
+  "version": "1.0.0",
   "scripts": {
     "start": "node server.js",
     "reset-project": "node ./scripts/reset-project.js",
