@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, Modal, Linking } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
@@ -308,10 +308,8 @@ export default function FarmDetails() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={styles.bookButton}>
-            <Link href="tel:0949599136">
+          <TouchableOpacity style={styles.bookButton} onPress={() => Linking.openURL(`https://wa.me/963949599136`)}>
               <Text style={styles.bookButtonText}>تواصل</Text>
-            </Link>
           </TouchableOpacity>
         )}
       </ScrollView>

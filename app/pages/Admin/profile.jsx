@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@/server/config';
+import { Ionicons } from '@expo/vector-icons'; // ✅ إضافة الأيقونات
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -80,7 +81,7 @@ export default function ProfileScreen() {
           }
         );
 
-        fetchUser(userId, token); // تحديث بيانات المستخدم بعد رفع الصورة
+        fetchUser(userId, token); 
       }
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -139,6 +140,11 @@ export default function ProfileScreen() {
         />
       }
     >
+      {/* ✅ زر حول التطبيق */}
+      <TouchableOpacity style={styles.aboutBtn} onPress={() => router.push('/pages/About/About')}>
+        <Ionicons name="help-circle-outline" size={28} color="#1E90FF" />
+      </TouchableOpacity>
+
       <Image
         source={
           user?.profileImage
@@ -174,6 +180,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#f9f9f9',
+  },
+  aboutBtn: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
   },
   avatar: {
     width: 120,

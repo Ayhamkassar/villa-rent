@@ -49,6 +49,7 @@ available: {
 bookings: [
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userName: String, 
     from: Date,
     to: Date,
     totalPrice: Number

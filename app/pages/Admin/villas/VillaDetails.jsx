@@ -68,7 +68,6 @@ export default function VillaDetails() {
         <Text style={styles.status}>الحالة: {villa?.status || '...'}</Text>
         <Text style={styles.type}>نوع المزرعة: {villa?.type === 'sale' ? 'بيع' : 'إيجار'}</Text>
         <Text style={styles.address}>العنوان: {villa?.address?.address || villa?.address || 'غير محدد'}</Text>
-        <Text style={styles.address}>رقم الهاتف: {villa?.contactNumber || '-'}</Text>
 
         <Text style={[styles.sectionTitle, { alignSelf: 'flex-end' }]}>التفاصيل الإضافية</Text>
         <View style={styles.extraDetails}>
@@ -123,24 +122,35 @@ export default function VillaDetails() {
       </ScrollView>
       {/* Bookings Section */}
       {villa?.type === 'rent' && (
-      <View style={styles.bookingsSection}>
-        <Text style={styles.sectionTitle}>الحجوزات</Text>
-        {bookingsLoading ? (
-          <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
-        ) : bookings.length === 0 ? (
-          
-          <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
-        ) : (
-          bookings.map((booking, idx) => (
-            <View key={booking._id || idx} style={styles.bookingItem}>
-              <Text style={styles.bookingText}>الحجز بواسطة: {booking.userName || booking.user?.name || '-'}</Text>
-              <Text style={styles.bookingText}>من: {booking.startDate ? new Date(booking.startDate).toLocaleDateString() : '-'} إلى: {booking.endDate ? new Date(booking.endDate).toLocaleDateString() : '-'}</Text>
-              {booking.status && <Text style={styles.bookingText}>الحالة: {booking.status}</Text>}
-            </View>
-          ))
-        )}
-      </View>
-      )}
+  <View style={styles.bookingsSection}>
+    <Text style={styles.sectionTitle}>📅 الحجوزات</Text>
+
+    {bookingsLoading ? (
+      <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
+    ) : bookings.length === 0 ? (
+      <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
+    ) : (
+      bookings.map((booking, idx) => (
+        <View key={booking._id || idx} style={styles.bookingCard}>
+          <Text style={styles.bookingName}>
+            👤 الحجز بواسطة: {booking.userName || booking.user?.name || 'غير معروف'}
+          </Text>
+          <Text style={styles.bookingDate}>
+            🗓 من: {booking.startDate ? new Date(booking.startDate).toLocaleDateString('ar-SY') : '-'}
+            {"\n"}إلى: {booking.endDate ? new Date(booking.endDate).toLocaleDateString('ar-SY') : '-'}
+          </Text>
+          {booking.status && (
+            <Text style={[styles.bookingStatus, 
+              booking.status === 'مؤكد' ? { color: 'green' } : { color: 'red' }
+            ]}>
+              الحالة: {booking.status}
+            </Text>
+          )}
+        </View>
+      ))
+    )}
+  </View>
+)}
     </LinearGradient>
   );
 }
@@ -172,10 +182,21 @@ const styles = StyleSheet.create({
   detailText: { fontSize: 16, color: '#0077b6' },
   backButton: { alignSelf: 'flex-start', backgroundColor: '#0077b6', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginBottom: 10 },
   backText: { color: '#fff', fontWeight: 'bold' },
-  bookingsSection: { width: '100%', marginTop: 10, marginBottom: 30, backgroundColor: '#f0f4f8', borderRadius: 10, padding: 12 },
-  bookingItem: { borderBottomWidth: 1, borderColor: '#e0e0e0', paddingVertical: 8 },
-  bookingText: { fontSize: 15, color: '#333' },
-  noBookingsText: { color: '#888', textAlign: 'center', marginVertical: 10 },
+  bookingCard: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  bookingName: { fontSize: 16, fontWeight: '600', marginBottom: 4, color: '#0077b6' },
+  bookingDate: { fontSize: 15, color: '#333', marginBottom: 4 },
+  bookingStatus: { fontSize: 15, fontWeight: 'bold' },
+  
 });
 
 

@@ -557,7 +557,7 @@ app.post('/api/users/upload/:id', upload.single('profileImage'), async (req, res
 // POST /api/farms/book/:id
 app.post('/api/farms/book/:id', async (req, res) => {
   try {
-    const { userId, from, to } = req.body;
+    const { userId,userName, from, to } = req.body;
     const farm = await Farm.findById(req.params.id);
     if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
 
@@ -583,7 +583,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
     }
 
     // تخزين الحجز
-    farm.bookings.push({ userId, from, to, totalPrice });
+    farm.bookings.push({ userId, from,userName, to, totalPrice });
     await farm.save();
 
     res.json({ message: 'تم الحجز بنجاح', totalPrice });

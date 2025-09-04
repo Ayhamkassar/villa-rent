@@ -128,11 +128,11 @@ export default function VillaDetails() {
         ) : bookings.length === 0 ? (
           <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
         ) : (
-          bookings.map((booking, idx) => (
-            <View key={booking._id || idx} style={styles.bookingItem}>
-              <Text style={styles.bookingText}>الحجز بواسطة: {booking.userName || booking.user?.name || '-'}</Text>
-              <Text style={styles.bookingText}>من: {booking.from ? new Date(booking.from).toLocaleDateString() : '-'} إلى: {booking.to ? new Date(booking.to).toLocaleDateString() : '-'}</Text>
-              {booking.status && <Text style={styles.bookingText}>الحالة: {booking.status}</Text>}
+          bookings.map((bookings, idx) => (
+            <View key={bookings._id || idx} style={styles.bookingItem}>
+              <Text style={styles.bookingText}>الحجز بواسطة: {bookings.userName || bookings.user?.name || '-'}</Text>
+              <Text style={styles.bookingText}>من: {bookings.from ? new Date(bookings.from).toLocaleDateString() : '-'} إلى: {bookings.to ? new Date(bookings.to).toLocaleDateString() : '-'}</Text>
+              {bookings.status && <Text style={styles.bookingText}>الحالة: {bookings.status}</Text>}
             </View>
           ))
         )}

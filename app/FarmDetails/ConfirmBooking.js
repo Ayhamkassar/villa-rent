@@ -1,28 +1,32 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { API_URL } from '@/server/config'
+import { API_URL } from '@/server/config';
 
 export default function ConfirmBooking() {
   const router = useRouter();
-  const { farmId, fromDate, toDate, quote } = useLocalSearchParams(); // هالطريقة صحيحة مع Expo Router
+  const { farmId, fromDate, toDate, quote, farmName } = useLocalSearchParams();
 
-  const formatDate = (date) => new Date(date).toISOString().split('T')[0];
+  const formatDate = (date) => new Date(date).toLocaleDateString();
 
   const handleConfirm = async () => {
     const userId = await AsyncStorage.getItem('userId');
+    const userName = await AsyncStorage.getItem('userName');
     if (!userId) return Alert.alert('خطأ', 'يجب تسجيل الدخول للحجز');
 
     try {
       await axios.post(`${API_URL}/api/farms/book/${farmId}`, {
         userId,
-        from: formatDate(fromDate),
-        to: formatDate(toDate)
+        from: fromDate,
+        to: toDate
       });
-      Alert.alert('تم', 'تم الحجز بنجاح');
-      router.replace('/'); // ترجع للصفحة الرئيسية أو أي صفحة تحب
+
+      const message = `✅ تم إرسال طلب حجز جديد\n\n👤 المستخدم: ${userName || 'غير معروف'}\n🏡 الفيلا: ${farmName || 'غير معروف'}\n📅 من: ${formatDate(fromDate)}\n📅 إلى: ${formatDate(toDate)}\n💰 السعر: ${quote || '-'}\n\nالرجاء تأكيد الحجز.`;
+      const url = `https://wa.me/963981834818?text=${encodeURIComponent(message)}`;
+      Linking.openURL(url);
+
     } catch (err) {
       console.error(err);
       Alert.alert('خطأ', err.response?.data?.message || 'فشل في الحجز');
@@ -32,27 +36,64 @@ export default function ConfirmBooking() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>تأكيد الحجز</Text>
-      <Text style={styles.text}>
-  تاريخ البداية: {new Date(fromDate).toLocaleDateString()}
-</Text>
 
-<Text style={styles.text}>
-  تاريخ النهاية: {new Date(toDate).toLocaleDateString()}
-</Text>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>المستخدم:</Text>
+        <Text style={styles.cardValue}>{AsyncStorage.getItem('userName') || 'غير معروف'}</Text>
+      </View>
 
-      <Text style={styles.text}>السعر الإجمالي: {quote || '-'}</Text>
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>الفيلا:</Text>
+        <Text style={styles.cardValue}>{farmName || '-'}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>تاريخ البداية:</Text>
+        <Text style={styles.cardValue}>{formatDate(fromDate)}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>تاريخ النهاية:</Text>
+        <Text style={styles.cardValue}>{formatDate(toDate)}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardLabel}>السعر الإجمالي:</Text>
+        <Text style={styles.cardValue}>{quote || '-'}</Text>
+      </View>
 
       <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-        <Text style={styles.confirmButtonText}>تأكيد الحجز</Text>
+        <Text style={styles.confirmButtonText}>تأكيد الحجز عبر واتساب</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex:1, justifyContent:'center', alignItems:'center', padding:20 },
-  title: { fontSize:26, fontWeight:'bold', marginBottom:20 },
-  text: { fontSize:18, marginBottom:10 },
-  confirmButton: { backgroundColor:'#0077b6', padding:15, borderRadius:10, marginTop:20 },
-  confirmButtonText: { color:'#fff', fontSize:18, fontWeight:'bold' },
+  container: { flex: 1, backgroundColor: '#f2f2f2', padding: 20, alignItems: 'center' },
+  title: { fontSize: 28, fontWeight: 'bold', marginVertical: 20, color: '#0077b6' },
+  card: { 
+    width: '100%', 
+    backgroundColor: '#fff', 
+    padding: 15, 
+    borderRadius: 12, 
+    marginBottom: 10, 
+    shadowColor: '#000', 
+    shadowOpacity: 0.1, 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowRadius: 4,
+    elevation: 3
+  },
+  cardLabel: { fontSize: 16, color: '#555', marginBottom: 5 },
+  cardValue: { fontSize: 18, fontWeight: 'bold', color: '#000' },
+  confirmButton: { 
+    marginTop: 20, 
+    backgroundColor: '#25D366', 
+    paddingVertical: 15, 
+    paddingHorizontal: 30, 
+    borderRadius: 12, 
+    width: '100%', 
+    alignItems: 'center' 
+  },
+  confirmButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 });
