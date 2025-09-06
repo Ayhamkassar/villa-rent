@@ -8,7 +8,6 @@ import {
   Alert,
   FlatList,
   Image,
-  ImageBackground,
   RefreshControl,
   StyleSheet,
   Text,
@@ -16,7 +15,6 @@ import {
   View,
 } from "react-native";
 
-import FarmListBG from "../../../../assets/farmlistbg.png";
 
 export default function VillasList() {
   const router = useRouter();
@@ -150,7 +148,6 @@ export default function VillasList() {
   }
 
   return (
-    <ImageBackground source={FarmListBG} style={styles.background} resizeMode="cover">
       <View style={styles.overlay}>
         <FlatList
           data={farms}
@@ -163,7 +160,6 @@ export default function VillasList() {
           }
         />
       </View>
-    </ImageBackground>
   );
 }
 

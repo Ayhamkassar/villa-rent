@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Dimensions, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -40,11 +40,7 @@ const LoginScreen = () => {
   };
 
   return (
-    <ImageBackground
-      source={require('../../../assets/loginbg.png')}
-      style={styles.background}
-      resizeMode="cover"
-    >
+   
       <View style={styles.overlay}>
         <View style={styles.formBox}>
           <Text style={styles.title}>تسجيل دخول</Text>
@@ -80,7 +76,6 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-    </ImageBackground>
   );
 };
 

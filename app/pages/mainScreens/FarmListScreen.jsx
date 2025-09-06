@@ -7,7 +7,6 @@ import {
   Alert,
   FlatList,
   Image,
-  ImageBackground,
   RefreshControl,
   StyleSheet,
   Text,
@@ -15,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import FarmListBG from "../../../assets/farmlistbg.png";
 
 const FarmListScreen = () => {
   const router = useRouter();
@@ -97,11 +95,6 @@ const FarmListScreen = () => {
   }
 
   return (
-    <ImageBackground
-      source={FarmListBG}
-      style={styles.background}
-      resizeMode="cover"
-    >
       <View style={styles.overlay}>
         {/* مربع البحث + زر بحث */}
         <View style={styles.searchRow}>
@@ -158,7 +151,6 @@ const FarmListScreen = () => {
           }
         />
       </View>
-    </ImageBackground>
   );
 };
 

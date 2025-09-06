@@ -2,7 +2,7 @@ import { API_URL } from '@/server/config';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Dimensions, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,11 +34,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <ImageBackground
-      source={require('../../../assets/images/loginbg.png')}
-      style={styles.background}
-      resizeMode="cover"
-    >
+  
       <View style={styles.overlay}>
         <View style={styles.formBox}>
           <Text style={styles.title}>استعادة كلمة المرور</Text>
@@ -62,7 +58,6 @@ export default function ForgotPassword() {
           </TouchableOpacity>
         </View>
       </View>
-    </ImageBackground>
   );
 }
 

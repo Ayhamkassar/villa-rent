@@ -1,19 +1,16 @@
+import { API_URL } from '@/server/config';
+import axios from 'axios';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
+  Alert,
+  Dimensions,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ImageBackground,
-  Dimensions,
-  Alert,
-  Platform,
-  ScrollView
+  View
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import axios from 'axios';
-import { API_URL } from '@/server/config';
 
 const { width, height } = Dimensions.get('window');
 
@@ -50,11 +47,7 @@ const RegisterScreen = () => {
     }
   };
   return (
-    <ImageBackground
-      source={require('../../../assets/images/register.png')}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    
       <View style={styles.formBox}>
         <Text style={styles.title}>إنشاء حساب</Text>
   
@@ -89,7 +82,6 @@ const RegisterScreen = () => {
           <Text style={styles.link}>لديك حساب؟ سجل الدخول</Text>
         </TouchableOpacity>
       </View>
-    </ImageBackground>
   );
   
 };
