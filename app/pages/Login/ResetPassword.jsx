@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ImageBackground, Dimensions } from 'react-native';
+import { API_URL } from "@/server/config";
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { API_URL } from "@/server/config";
+import React, { useState } from 'react';
+import { Alert, Dimensions, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 
 const { width, height } = Dimensions.get('window');
@@ -34,7 +34,7 @@ export default function ResetPassword() {
 
   return (
     <ImageBackground
-      source={require('../../../assets/images/loginBG.png')}
+      source={require('../../../assets/images/loginbg.png')}
       style={styles.background}
       resizeMode="cover"
     >
