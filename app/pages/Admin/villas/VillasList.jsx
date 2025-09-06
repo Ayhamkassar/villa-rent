@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 
-import FarmListBG from "../../../../assets/images/farmlistbg.png";
+import FarmListBG from "../../../../assets/farmlistbg.png";
 
 export default function VillasList() {
   const router = useRouter();

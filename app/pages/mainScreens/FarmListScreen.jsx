@@ -1,21 +1,21 @@
+import { API_URL } from "@/server/config";
+import axios from "axios";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  ImageBackground,
   ActivityIndicator,
   Alert,
+  FlatList,
+  Image,
+  ImageBackground,
   RefreshControl,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import axios from "axios";
-import { API_URL } from "@/server/config";
-import FarmListBG from "../../../assets/images/FarmListBG.png";
+import FarmListBG from "../../../assets/farmlistbg.png";
 
 const FarmListScreen = () => {
   const router = useRouter();
