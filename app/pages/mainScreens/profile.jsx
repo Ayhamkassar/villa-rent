@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Image, Button, StyleSheet, Alert, ActivityIndicator, ScrollView, RefreshControl, TextInput, TouchableOpacity } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@/server/config';
 import { Ionicons } from '@expo/vector-icons'; // ✅ إضافة الأيقونات
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Button, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -146,14 +146,7 @@ export default function ProfileScreen() {
         <Ionicons name="help-circle-outline" size={28} color="#1E90FF" />
       </TouchableOpacity>
 
-      <Image
-        source={
-          user?.profileImage
-            ? { uri: `${API_URL}${user.profileImage}` }
-            : require('../../../assets/default-avatar.png')
-        }
-        style={styles.avatar}
-      />
+      
       <Button title="تغيير الصورة" onPress={pickImage} />
       {isEditingName ? (
         <View style={styles.nameRow}>
