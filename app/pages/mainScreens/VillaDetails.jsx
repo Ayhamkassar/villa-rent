@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image, Alert, TouchableOpacity, Modal } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import axios from 'axios';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { API_URL } from '@/server/config';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function VillaDetails() {
   const { id } = useLocalSearchParams();
@@ -121,23 +121,48 @@ export default function VillaDetails() {
       </ScrollView>
       {/* Bookings Section */}
       {villa?.type === 'rent' && (
-      <View style={styles.bookingsSection}>
-        <Text style={styles.sectionTitle}>الحجوزات</Text>
-        {bookingsLoading ? (
-          <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
-        ) : bookings.length === 0 ? (
-          <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
-        ) : (
-          bookings.map((bookings, idx) => (
-            <View key={bookings._id || idx} style={styles.bookingItem}>
-              <Text style={styles.bookingText}>الحجز بواسطة: {bookings.userName || bookings.user?.name || '-'}</Text>
-              <Text style={styles.bookingText}>من: {bookings.from ? new Date(bookings.from).toLocaleDateString() : '-'} إلى: {bookings.to ? new Date(bookings.to).toLocaleDateString() : '-'}</Text>
-              {bookings.status && <Text style={styles.bookingText}>الحالة: {bookings.status}</Text>}
-            </View>
-          ))
-        )}
-      </View>
-      )}
+  <View style={styles.bookingsSection}>
+    <Text style={styles.sectionTitle}>الحجوزات</Text>
+    {bookingsLoading ? (
+      <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
+    ) : bookings.length === 0 ? (
+      <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
+    ) : (
+      bookings.map((booking, idx) => (
+        <View key={booking._id || idx} style={styles.bookingItem}>
+          <Text style={styles.bookingText}>
+            الحجز بواسطة: {booking.userName || booking.user?.name || '-'}
+          </Text>
+          <Text style={styles.bookingText}>
+            من: {booking.from ? new Date(booking.from).toLocaleDateString() : '-'} 
+            إلى: {booking.to ? new Date(booking.to).toLocaleDateString() : '-'}
+          </Text>
+          <Text style={styles.bookingText}>الحالة: {booking.status}</Text>
+
+          {booking.status !== 'cancelled' && (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={async () => {
+                try {
+                  await axios.put(`${API_URL}/api/farms/${villa._id}/bookings/${booking._id}/status`, {
+                    status: 'cancelled'
+                  });
+                  Alert.alert('تم إلغاء الحجز');
+                  // تحديث القائمة
+                  fetchBookings();
+                } catch (err) {
+                  Alert.alert('خطأ', 'فشل في إلغاء الحجز');
+                }
+              }}
+            >
+              <Text style={styles.cancelButtonText}>إلغاء الحجز</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ))
+    )}
+  </View>
+)}
     </LinearGradient>
   );
 }
@@ -173,6 +198,17 @@ const styles = StyleSheet.create({
   bookingItem: { borderBottomWidth: 1, borderColor: '#e0e0e0', paddingVertical: 8 },
   bookingText: { fontSize: 15, color: '#333' },
   noBookingsText: { color: '#888', textAlign: 'center', marginVertical: 10 },
+  cancelButton: {
+    backgroundColor: '#e63946',
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 5,
+    alignItems: 'center'
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: 'bold'
+  }  
 });
 
 

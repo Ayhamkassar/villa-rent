@@ -806,6 +806,29 @@ app.post('/api/farms/quote/:id', async (req, res) => {
   }
 });
 // =====================
+// تغيير حالة الحجز
+// =====================
+app.put('/api/farms/:farmId/bookings/:bookingId/status', async (req, res) => {
+  try {
+    const { farmId, bookingId } = req.params;
+    const { status } = req.body; // ex: "cancelled" or "confirmed"
+
+    const farm = await Farm.findById(farmId);
+    if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
+
+    const booking = farm.bookings.id(bookingId);
+    if (!booking) return res.status(404).json({ message: 'الحجز غير موجود' });
+
+    booking.status = status;
+    await farm.save();
+
+    res.json({ message: 'تم تحديث حالة الحجز', booking });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'خطأ في السيرفر' });
+  }
+});
+// =====================
 // تشغيل السيرفر
 // =====================
 app.listen(3000, '0.0.0.0',() => console.log('Server running on port 3000'));

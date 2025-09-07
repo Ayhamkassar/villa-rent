@@ -52,7 +52,12 @@ bookings: [
     userName: String, 
     from: Date,
     to: Date,
-    totalPrice: Number
+    totalPrice: Number,
+    status: {
+      type: String,
+      enum: ['pending', 'confirmed', 'cancelled'],
+      default: 'pending'
+    }
   }
 ],
 startBookingTime: { type: String, required: true }, // or Date if you want full datetime
