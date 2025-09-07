@@ -626,9 +626,11 @@ app.post('/api/farms/book/:id', async (req, res) => {
 
     // التحقق من التداخل
     const existingBookings = await bookings.find({ farmId: farm._id });
-    const isOverlap = existingBookings.some(b =>
-      (new Date(from) <= b.to && new Date(to) >= b.from)
-    );
+    const isOverlap = existingBookings.some(b => {
+      const bStart = new Date(b.from);
+      const bEnd = new Date(b.to);
+      return (new Date(from) < bEnd && new Date(to) > bStart);
+    });
     if (isOverlap) {
       return res.status(400).json({ message: 'التواريخ محجوزة مسبقاً' });
     }
@@ -657,6 +659,11 @@ app.post('/api/farms/book/:id', async (req, res) => {
       status: 'pending'
     });
     await newBooking.save();
+
+    // Add the booking to the farm's bookings array
+    await Farm.findByIdAndUpdate(farm._id, {
+      $push: { bookings: newBooking._id }
+    });
 
     res.json({ message: 'تم الحجز بنجاح', bookings: newBooking });
   } catch (err) {
@@ -808,7 +815,7 @@ app.post('/api/farms/quote/:id', async (req, res) => {
       return res.status(400).json({ message: 'تاريخ النهاية يجب أن يكون بعد البداية' });
     }
 
-    const isOverlap = farm.bookings.some(b => {
+    const isOverlap = bookings.some(b => {
       const bStart = new Date(b.from);
       const bEnd   = new Date(b.to);
       return start < bEnd && end > bStart;
@@ -846,7 +853,7 @@ app.put('/api/farms/:farmId/bookings/:bookingId/status', async (req, res) => {
     const farm = await Farm.findById(farmId);
     if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
 
-    const booking = farm.bookings.id(bookingId);
+    const booking = bookings.id(bookingId);
     if (!booking) return res.status(404).json({ message: 'الحجز غير موجود' });
 
     booking.status = status;

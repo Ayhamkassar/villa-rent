@@ -27,7 +27,6 @@ export default function ConfirmBooking() {
 
       Alert.alert('نجاح', 'تم إرسال طلب الحجز بنجاح');
 
-      // الرسالة على واتساب تبقى كما هي
       const message = `✅ تم إرسال طلب حجز جديد\n\n👤 المستخدم: ${userName || 'غير معروف'}\n🏡 الفيلا: ${farmName || 'غير معروف'}\n📅 من: ${formatDate(fromDate)}\n📅 إلى: ${formatDate(toDate)}\n💰 السعر: ${quote || '-'}\n\nالرجاء تأكيد الحجز.`;
       const url = `https://wa.me/963981834818?text=${encodeURIComponent(message)}`;
       Linking.openURL(url);

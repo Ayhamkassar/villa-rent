@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
+import { bookings } from "../../server/Models/bookings";
 
 export default function FarmDetails() {
   const { id } = useLocalSearchParams();
@@ -24,7 +25,7 @@ export default function FarmDetails() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const userId = await AsyncStorage.getItem('userId'); // تأكد أنه مخزن بعد تسجيل الدخول
+        const userId = await AsyncStorage.getItem('userId');
         if (!userId) return;
         const res = await axios.get(`${API_URL}/api/users/${userId}`);
         setCurrentUser(res.data);
@@ -84,7 +85,7 @@ export default function FarmDetails() {
   
       // إعادة تلوين الأيام المحجوزة فقط
       const booked = {};
-      farm.bookings?.forEach(booking => {
+      bookings?.forEach(booking => {
         const current = new Date(booking.from);
         const last = new Date(booking.to);
   
@@ -147,6 +148,7 @@ export default function FarmDetails() {
         from: fromDate,
         to: toDate
       });
+      console.log(currentUser)
       router.push({
         pathname: '../FarmDetails/ConfirmBooking',
         params: {
