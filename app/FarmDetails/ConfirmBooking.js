@@ -11,13 +11,22 @@ export default function ConfirmBooking() {
   const formatDate = (date) => new Date(date).toLocaleDateString();
 
   const handleConfirm = async () => {
-    if (!farmId) return Alert.alert('خطأ', 'معلومات الفيلا غير موجودة');
+    if (!farmId || !userId || !fromDate || !toDate) {
+      return Alert.alert('خطأ', 'الرجاء التأكد من جميع بيانات الحجز');
+    }
 
     try {
-      await axios.post(`${API_URL}/api/farms/book/${farmId}`, { from: fromDate, to: toDate });
-      await axios.post(`${API_URL}/api/farms/${farmId}`, { name: farmName });
-      await axios.post(`${API_URL}/api/users/${userId}`, { name: userName });
+      // إرسال طلب الحجز مرة واحدة فقط
+      await axios.post(`${API_URL}/api/farms/book/${farmId}`, {
+        from: fromDate,
+        to: toDate,
+        userId,
+        userName,
+      });
 
+      Alert.alert('نجاح', 'تم إرسال طلب الحجز بنجاح');
+
+      // الرسالة على واتساب تبقى كما هي
       const message = `✅ تم إرسال طلب حجز جديد\n\n👤 المستخدم: ${userName || 'غير معروف'}\n🏡 الفيلا: ${farmName || 'غير معروف'}\n📅 من: ${formatDate(fromDate)}\n📅 إلى: ${formatDate(toDate)}\n💰 السعر: ${quote || '-'}\n\nالرجاء تأكيد الحجز.`;
       const url = `https://wa.me/963981834818?text=${encodeURIComponent(message)}`;
       Linking.openURL(url);
@@ -29,7 +38,6 @@ export default function ConfirmBooking() {
 
   return (
     <View style={styles.container}>
-      {/* زر الرجوع */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Text style={styles.backButtonText}>◀ رجوع</Text>
       </TouchableOpacity>
