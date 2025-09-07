@@ -14,6 +14,7 @@ export default function VillaDetails() {
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
 
+  // === جلب بيانات الفيلّا ===
   useEffect(() => {
     (async () => {
       try {
@@ -28,13 +29,22 @@ export default function VillaDetails() {
     })();
   }, [id]);
 
-  useEffect(() => {
-    if (!id) return;
+  // === دالة جلب الحجوزات ===
+  const fetchBookings = async () => {
     setBookingsLoading(true);
-    axios.get(`${API_URL}/api/bookings?villaId=${id}`)
-      .then(res => setBookings(res.data))
-      .catch(() => setBookings([]))
-      .finally(() => setBookingsLoading(false));
+    try {
+      const res = await axios.get(`${API_URL}/api/bookings/${id}`);
+      setBookings(res.data);
+    } catch (err) {
+      console.log('Error fetching bookings:', err.message);
+      setBookings([]);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (id) fetchBookings();
   }, [id]);
 
   if (loading) {
@@ -66,7 +76,6 @@ export default function VillaDetails() {
         <Text style={styles.status}>الحالة: {villa?.status || '...'}</Text>
         <Text style={styles.type}>نوع المزرعة: {villa?.type === 'sale' ? 'بيع' : 'إيجار'}</Text>
         <Text style={styles.address}>العنوان: {villa?.address?.address || villa?.address || 'غير محدد'}</Text>
-        <Text style={styles.address}>رقم الهاتف: {villa?.contactNumber || '-'}</Text>
         <Text style={styles.address}>رقم الهاتف: {villa?.contactNumber || '-'}</Text>
 
         <Text style={[styles.sectionTitle, { alignSelf: 'flex-end' }]}>التفاصيل الإضافية</Text>
@@ -120,71 +129,71 @@ export default function VillaDetails() {
           )}
         </View>
       </ScrollView>
+
       {/* Bookings Section */}
       {villa?.type === 'rent' && (
-  <View style={styles.bookingsSection}>
-    <Text style={styles.sectionTitle}>الحجوزات</Text>
-    {bookingsLoading ? (
-      <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
-    ) : bookings.length === 0 ? (
-      <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
-    ) : (
-      bookings.map((booking, idx) => (
-        <View key={booking._id || idx} style={styles.bookingItem}>
-          <Text style={styles.bookingText}>
-            الحجز بواسطة: {booking.userName || booking.user?.name || '-'}
-          </Text>
-          <Text style={styles.bookingText}>
-            من: {booking.from ? new Date(booking.from).toLocaleDateString() : '-'} 
-            إلى: {booking.to ? new Date(booking.to).toLocaleDateString() : '-'}
-          </Text>
-          <Text style={styles.bookingText}>الحالة: {booking.status}</Text>
+        <View style={styles.bookingsSection}>
+          <Text style={styles.sectionTitle}>الحجوزات</Text>
+          {bookingsLoading ? (
+            <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
+          ) : bookings.length === 0 ? (
+            <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
+          ) : (
+            bookings.map((booking, idx) => (
+              <View key={booking._id || idx} style={styles.bookingItem}>
+                <Text style={styles.bookingText}>
+                  الحجز بواسطة: {booking.userName || booking.userId?.name || '-'}
+                </Text>
+                <Text style={styles.bookingText}>
+                  من: {booking.from ? new Date(booking.from).toLocaleDateString() : '-'} 
+                  إلى: {booking.to ? new Date(booking.to).toLocaleDateString() : '-'}
+                </Text>
+                <Text style={styles.bookingText}>الحالة: {booking.status}</Text>
 
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 5 }}>
-            {booking.status === 'pending' && (
-              <TouchableOpacity
-                style={styles.confirmButton}
-                onPress={async () => {
-                  try {
-                    await axios.put(`${API_URL}/api/farms/${villa._id}/bookings/${booking._id}/status`, {
-                      status: 'confirmed'
-                    });
-                    Alert.alert('تم تأكيد الحجز');
-                    fetchBookings();
-                  } catch (err) {
-                    Alert.alert('خطأ', 'فشل في تأكيد الحجز');
-                  }
-                }}
-              >
-                <Text style={styles.confirmButtonText}>تأكيد الحجز</Text>
-              </TouchableOpacity>
-            )}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 5 }}>
+                  {booking.status === 'pending' && (
+                    <TouchableOpacity
+                      style={styles.confirmButton}
+                      onPress={async () => {
+                        try {
+                          await axios.put(`${API_URL}/api/bookings/${booking._id}/status`, {
+                            status: 'confirmed'
+                          });
+                          Alert.alert('تم تأكيد الحجز');
+                          await fetchBookings();
+                        } catch (err) {
+                          Alert.alert('خطأ', 'فشل في تأكيد الحجز');
+                        }
+                      }}
+                    >
+                      <Text style={styles.confirmButtonText}>تأكيد الحجز</Text>
+                    </TouchableOpacity>
+                  )}
 
-            {booking.status !== 'cancelled' && (
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={async () => {
-                  try {
-                    await axios.put(`${API_URL}/api/farms/${villa._id}/bookings/${booking._id}/status`, {
-                      status: 'cancelled'
-                    });
-                    Alert.alert('تم إلغاء الحجز');
-                    fetchBookings();
-                  } catch (err) {
-                    Alert.alert('خطأ', 'فشل في إلغاء الحجز');
-                  }
-                }}
-              >
-                <Text style={styles.cancelButtonText}>إلغاء الحجز</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+                  {booking.status !== 'cancelled' && (
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={async () => {
+                        try {
+                          await axios.put(`${API_URL}/api/bookings/${booking._id}/status`, {
+                            status: 'cancelled'
+                          });
+                          Alert.alert('تم إلغاء الحجز');
+                          await fetchBookings();
+                        } catch (err) {
+                          Alert.alert('خطأ', 'فشل في إلغاء الحجز');
+                        }
+                      }}
+                    >
+                      <Text style={styles.cancelButtonText}>إلغاء الحجز</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            ))
+          )}
         </View>
-      ))
-    )}
-  </View>
-)}
-
+      )}
     </LinearGradient>
   );
 }
@@ -220,17 +229,19 @@ const styles = StyleSheet.create({
   bookingItem: { borderBottomWidth: 1, borderColor: '#e0e0e0', paddingVertical: 8 },
   bookingText: { fontSize: 15, color: '#333' },
   noBookingsText: { color: '#888', textAlign: 'center', marginVertical: 10 },
+  confirmButton: {
+    backgroundColor: '#2a9d8f',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  confirmButtonText: { color: '#fff', fontWeight: 'bold' },
   cancelButton: {
     backgroundColor: '#e63946',
     padding: 8,
     borderRadius: 8,
-    marginTop: 5,
     alignItems: 'center'
   },
-  cancelButtonText: {
-    color: '#fff',
-    fontWeight: 'bold'
-  }  
+  cancelButtonText: { color: '#fff', fontWeight: 'bold' }
 });
-
-

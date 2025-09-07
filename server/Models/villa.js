@@ -45,21 +45,6 @@ available: {
   type: Boolean,
   default: true
 },
-
-bookings: [
-  {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    userName: String, 
-    from: Date,
-    to: Date,
-    totalPrice: Number,
-    status: {
-      type: String,
-      enum: ['pending', 'confirmed', 'cancelled'],
-      default: 'pending'
-    }
-  }
-],
 startBookingTime: { type: String, required: true }, // or Date if you want full datetime
 endBookingTime: { type: String, required: true },
 ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

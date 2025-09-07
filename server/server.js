@@ -11,6 +11,7 @@ const verifyAdmin = require('./middleware');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const bookings = require('./Models/bookings');
 
 
 dotenv.config();
@@ -616,14 +617,16 @@ app.post('/api/users/upload/:id', upload.single('profileImage'), async (req, res
 // حجز فيلا
 // =====================
 // POST /api/farms/book/:id
+
 app.post('/api/farms/book/:id', async (req, res) => {
   try {
-    const { userId,userName, from, to } = req.body;
+    const { userId, userName, from, to } = req.body;
     const farm = await Farm.findById(req.params.id);
     if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
 
-    // التحقق من الحجوزات السابقة
-    const isOverlap = farm.bookings.some(b =>
+    // التحقق من التداخل
+    const existingBookings = await bookings.find({ farmId: farm._id });
+    const isOverlap = existingBookings.some(b =>
       (new Date(from) <= b.to && new Date(to) >= b.from)
     );
     if (isOverlap) {
@@ -634,25 +637,34 @@ app.post('/api/farms/book/:id', async (req, res) => {
     let totalPrice = 0;
     let current = new Date(from);
     while (current <= new Date(to)) {
-      const day = current.getDay(); // 0=الأحد ... 6=السبت
+      const day = current.getDay();
       if (day === 4 || day === 5 || day === 6) {
-        totalPrice += farm.weekendPrice; // خميس/جمعة/سبت
+        totalPrice += farm.weekendPrice;
       } else {
         totalPrice += farm.midweekPrice;
       }
       current.setDate(current.getDate() + 1);
     }
 
-    // تخزين الحجز
-    farm.bookings.push({ userId, from,userName, to, totalPrice });
-    await farm.save();
+    // إنشاء الحجز
+    const newBooking = new Booking({
+      farmId: farm._id,
+      userId,
+      userName,
+      from,
+      to,
+      totalPrice,
+      status: 'pending'
+    });
+    await newBooking.save();
 
-    res.json({ message: 'تم الحجز بنجاح', totalPrice });
+    res.json({ message: 'تم الحجز بنجاح', booking: newBooking });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'خطأ في السيرفر' });
   }
 });
+
 
 
 // =====================
@@ -682,24 +694,13 @@ app.get('/api/users/:id', async (req, res) => {
 // =====================
 // جلب كل الحجوزات لمزرعة واحدة
 // =====================
-app.get('/api/bookings', async (req, res) => {
+app.get('/api/bookings/:farmId', async (req, res) => {
   try {
-    const { villaId } = req.body;
-    if (!villaId) {
-      return res.status(400).json({ message: 'يرجى تحديد villaId' });
-    }
-    const farm = await Farm.findById(villaId).populate('bookings.userId', 'name email');
-    if (!farm) {
-      return res.status(404).json({ message: 'المزرعة غير موجودة' });
-    }
-    // If you want to include user info, map it here
-    const bookings = (farm.bookings || []).map(b => ({
-      ...b._doc,
-      user: b.userId, // populated user object
-    }));
+    const bookings = await bookings.find({ farmId: req.params.farmId })
+      .populate('userId', 'name email');
     res.json(bookings);
   } catch (err) {
-    res.status(500).json({ message: 'حدث خطأ أثناء جلب الحجوزات', error: err.message });
+    res.status(500).json({ message: 'خطأ في السيرفر' });
   }
 });
 
@@ -740,6 +741,35 @@ app.put('/api/users/:id', async (req, res) => {
     res.status(500).json({ message: 'حدث خطأ أثناء تحديث المستخدم' });
   }
 });
+// =====================
+// تعديل حالة الحجز
+// =====================
+app.put('/api/bookings/:bookingId/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const booking = await bookings.findById(req.params.bookingId);
+    if (!booking) return res.status(404).json({ message: 'الحجز غير موجود' });
+
+    booking.status = status;
+    await booking.save();
+
+    res.json({ message: 'تم تحديث حالة الحجز', booking });
+  } catch (err) {
+    res.status(500).json({ message: 'خطأ في السيرفر' });
+  }
+});
+// =====================
+// حذف حجز
+// =====================
+app.delete('/api/bookings/:bookingId', async (req, res) => {
+  try {
+    await bookings.findByIdAndDelete(req.params.bookingId);
+    res.json({ message: 'تم حذف الحجز' });
+  } catch (err) {
+    res.status(500).json({ message: 'خطأ في السيرفر' });
+  }
+});
+
 
 // =====================
 // حذف مستخدم (admin فقط)
