@@ -1,6 +1,7 @@
 import { API_URL } from "@/server/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -148,6 +149,10 @@ export default function VillasList() {
   }
 
   return (
+    <LinearGradient
+    colors={['#74ebd5', '#ACB6E5']} // سماوي ↔ بنفسجي فاتح
+    style={{ flex: 1 }}
+  >
       <View style={styles.overlay}>
         <FlatList
           data={farms}
@@ -160,6 +165,7 @@ export default function VillasList() {
           }
         />
       </View>
+      </LinearGradient>
   );
 }
 

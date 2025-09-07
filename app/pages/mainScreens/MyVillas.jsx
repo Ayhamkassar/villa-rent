@@ -1,6 +1,7 @@
 import { API_URL } from "@/server/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient"; // ✅ استدعاء التدريج
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -8,14 +9,12 @@ import {
   Alert,
   FlatList,
   Image,
-
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
 
 export default function MyVillas() {
   const router = useRouter();
@@ -38,7 +37,9 @@ export default function MyVillas() {
   const fetchFarms = useCallback(async (id) => {
     try {
       const res = await axios.get(`${API_URL}/api/farms`);
-      const myFarms = res.data.filter((f) => f.ownerId === id || f.ownerId?._id === id);
+      const myFarms = res.data.filter(
+        (f) => f.ownerId === id || f.ownerId?._id === id
+      );
       setFarms(myFarms);
     } catch (error) {
       console.error("Error fetching farms:", error);
@@ -66,7 +67,15 @@ export default function MyVillas() {
   };
 
   const renderFarm = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => router.push({ pathname: "/pages/mainScreens/VillaDetails", params: { id: item._id } })}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() =>
+        router.push({
+          pathname: "/pages/mainScreens/VillaDetails",
+          params: { id: item._id },
+        })
+      }
+    >
       <Image
         source={{
           uri:
@@ -91,7 +100,12 @@ export default function MyVillas() {
       </View>
       <TouchableOpacity
         style={styles.editButton}
-        onPress={() => router.push({ pathname: "/pages/mainScreens/EditMyVilla", params: { id: item._id } })}
+        onPress={() =>
+          router.push({
+            pathname: "/pages/mainScreens/EditMyVilla",
+            params: { id: item._id },
+          })
+        }
       >
         <Text style={styles.editText}>تعديل</Text>
       </TouchableOpacity>
@@ -107,26 +121,37 @@ export default function MyVillas() {
   }
 
   return (
+    <LinearGradient
+      colors={["#74ebd5", "#ACB6E5"]}
+      style={styles.background}
+    >
       <View style={styles.overlay}>
         <FlatList
           data={farms}
           renderItem={renderFarm}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
-          ListEmptyComponent={<Text style={styles.emptyText}>لا توجد مزارع للعرض حالياً</Text>}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>لا توجد مزارع للعرض حالياً</Text>
+          }
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#27ae60"]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#27ae60"]}
+            />
           }
         />
       </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { justifyContent: "center", alignItems: "center" },
-  background: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", padding: 15 },
+  background: { flex: 1 },
+  overlay: { flex: 1, padding: 15 },
   listContent: { paddingBottom: 20 },
   card: {
     flexDirection: "row",
@@ -155,5 +180,3 @@ const styles = StyleSheet.create({
   },
   editText: { color: "#fff", fontWeight: "bold" },
 });
-
-

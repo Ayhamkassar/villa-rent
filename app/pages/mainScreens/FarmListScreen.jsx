@@ -1,5 +1,6 @@
 import { API_URL } from "@/server/config";
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient"; // ✅ استيراد التدريج
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -27,14 +28,9 @@ const FarmListScreen = () => {
     try {
       setLoading(true);
 
-      // بناء الرابط مع query params
       let url = `${API_URL}/api/farms?`;
-      if (filter !== "all") {
-        url += `type=${filter}&`;
-      }
-      if (search.trim() !== "") {
-        url += `search=${encodeURIComponent(search)}&`;
-      }
+      if (filter !== "all") url += `type=${filter}&`;
+      if (search.trim() !== "") url += `search=${encodeURIComponent(search)}&`;
 
       const res = await axios.get(url);
       setFarms(res.data);
@@ -48,7 +44,7 @@ const FarmListScreen = () => {
   };
 
   useEffect(() => {
-    fetchFarms(); // أول مرة بس
+    fetchFarms();
   }, [filter]);
 
   const onRefresh = () => {
@@ -88,20 +84,26 @@ const FarmListScreen = () => {
 
   if (loading && !refreshing) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#27ae60" />
-      </View>
+      <LinearGradient colors={["#74ebd5", "#ACB6E5"]} style={styles.container}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#27ae60" />
+        </View>
+      </LinearGradient>
     );
   }
 
   return (
+    <LinearGradient
+      colors={["#74ebd5", "#ACB6E5"]} // ✅ تدريج سماوي ↔ بنفسجي فاتح
+      style={styles.container}
+    >
       <View style={styles.overlay}>
         {/* مربع البحث + زر بحث */}
         <View style={styles.searchRow}>
           <TextInput
             style={styles.searchInput}
             placeholder="ابحث عن مزرعة..."
-            placeholderTextColor="#ccc"
+            placeholderTextColor="#555"
             value={search}
             onChangeText={setSearch}
           />
@@ -151,14 +153,14 @@ const FarmListScreen = () => {
           }
         />
       </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: { justifyContent: "center", alignItems: "center" },
-  background: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", padding: 15 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  overlay: { flex: 1, padding: 15 },
   listContent: { paddingBottom: 20 },
 
   searchRow: {
@@ -182,10 +184,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginLeft: 8,
   },
-  searchButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+  searchButtonText: { color: "#fff", fontWeight: "bold" },
 
   filterContainer: {
     flexDirection: "row",
@@ -199,13 +198,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginHorizontal: 5,
   },
-  activeFilter: {
-    backgroundColor: "#27ae60",
-  },
-  filterText: {
-    color: "#2c3e50",
-    fontWeight: "bold",
-  },
+  activeFilter: { backgroundColor: "#27ae60" },
+  filterText: { color: "#2c3e50", fontWeight: "bold" },
 
   card: {
     flexDirection: "row",

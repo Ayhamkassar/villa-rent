@@ -11,7 +11,6 @@ const verifyAdmin = require('./middleware');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-const API_URL = require('../server/config')
 
 
 dotenv.config();
@@ -28,8 +27,8 @@ app.use(bodyParser.json());
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'myvilla234@gmail.com',
-    pass: 'eczj lieo qiig npro',
+    user: process.env.user,
+    pass: process.env.pass,
   }
 });
 // =====================
@@ -100,7 +99,69 @@ console.error(err);
 res.status(500).json({ message: 'حدث خطأ في السيرفر' });
 }
 });
+// =====================
+// إعادة إرسال الإيميل
+// =====================
+app.post('/api/resend-activation', async()=>{
+  
+  try {
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ name, email, password: hashedPassword,isVerified: false,
+      verificationToken,
+      verificationExpires: Date.now() + 3600000 });
+    await newUser.save();
 
+    const mailOptions = {
+      from: process.env.user,
+      to: email,
+      subject: 'تفعيل الحساب',
+      text: `مرحبا ${name},\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\n`
+    };
+
+   await transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error('خطأ في إرسال البريد:', error);
+      } else {
+        console.log('Email sent: ' + info.response);
+      }
+    });
+    
+
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.status(201).json({
+      message: 'تم إنشاء الحساب بنجاح',
+      token,
+      user: { id: newUser._id, name: newUser.name, email: newUser.email },
+    });
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({ message: 'حدث خطأ أثناء إنشاء الحساب' });
+  }
+});
+
+app.get('/api/verify/:token', async (req, res) => {
+  try {
+    const user = await User.findOne({
+      verificationToken: req.params.token,
+      verificationExpires: { $gt: Date.now() }
+    });
+
+    if (!user) return res.status(400).json({ message: 'الرابط غير صالح أو انتهت صلاحيته' });
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    user.verificationExpires = null;
+
+    await user.save();
+
+    res.json({ message: 'تم تفعيل الحساب بنجاح' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'خطأ في السيرفر' });
+  }
+});
 // =====================
 // تسجيل مستخدم جديد
 // =====================
@@ -128,10 +189,10 @@ app.post('/api/register', async (req, res) => {
     await newUser.save();
 
     const mailOptions = {
-      from: 'myvilla234@gmail.com',
+      from: process.env.user,
       to: email,
       subject: 'تفعيل الحساب',
-      text: `مرحبا ${name},\n\nاضغط الرابط لتفعيل حسابك:\n${API_URL}/api/verify/${verificationToken}\n\n`
+      text: `مرحبا ${name},\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\n`
     };
 
    await transporter.sendMail(mailOptions, (error, info) => {

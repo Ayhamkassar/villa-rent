@@ -1,9 +1,9 @@
 import { API_URL } from "@/server/config";
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,7 +33,7 @@ export default function ResetPassword() {
   };
 
   return (
-   
+    <LinearGradient colors={['#74ebd5', '#ACB6E5']} style={styles.background}>
       <View style={styles.overlay}>
         <View style={styles.formBox}>
           <Text style={styles.title}>إعادة تعيين كلمة المرور</Text>
@@ -66,10 +66,16 @@ export default function ResetPassword() {
           />
 
           <TouchableOpacity style={styles.button} onPress={handleReset}>
-            <Text style={styles.buttonText}>تحديث كلمة المرور</Text>
+            <LinearGradient
+              colors={['#2ecc71', '#27ae60']}
+              style={styles.gradientButton}
+            >
+              <Text style={styles.buttonText}>تحديث كلمة المرور</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
+    </LinearGradient>
   );
 }
 
@@ -78,10 +84,15 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   formBox: {
     width: '85%',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 15,
     padding: 20,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 5,
   },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 15, color: '#333', textAlign: 'center' },
   input: {
@@ -95,12 +106,15 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   button: {
-    backgroundColor: '#2ecc71',
-    padding: 12,
     width: '100%',
     borderRadius: 10,
-    alignItems: 'center',
+    overflow: 'hidden',
     marginTop: 5,
+  },
+  gradientButton: {
+    padding: 12,
+    alignItems: 'center',
+    borderRadius: 10,
   },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });

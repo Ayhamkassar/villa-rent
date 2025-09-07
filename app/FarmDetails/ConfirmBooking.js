@@ -1,32 +1,26 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_URL } from '@/server/config';
+import axios from 'axios';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React from 'react';
+import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ConfirmBooking() {
   const router = useRouter();
-  const { farmId, fromDate, toDate, quote, farmName } = useLocalSearchParams();
+  const { farmId, fromDate, toDate, quote, farmName, userId, userName } = useLocalSearchParams();
 
   const formatDate = (date) => new Date(date).toLocaleDateString();
 
   const handleConfirm = async () => {
-    const userId = await AsyncStorage.getItem('userId');
-    const userName = await AsyncStorage.getItem('userName');
-    if (!userId) return Alert.alert('خطأ', 'يجب تسجيل الدخول للحجز');
+    if (!farmId) return Alert.alert('خطأ', 'معلومات الفيلا غير موجودة');
 
     try {
-      await axios.post(`${API_URL}/api/farms/book/${farmId}`, {
-        userId,
-        from: fromDate,
-        to: toDate
-      });
+      await axios.post(`${API_URL}/api/farms/book/${farmId}`, { from: fromDate, to: toDate });
+      await axios.post(`${API_URL}/api/farms/${farmId}`, { name: farmName });
+      await axios.post(`${API_URL}/api/users/${userId}`, { name: userName });
 
       const message = `✅ تم إرسال طلب حجز جديد\n\n👤 المستخدم: ${userName || 'غير معروف'}\n🏡 الفيلا: ${farmName || 'غير معروف'}\n📅 من: ${formatDate(fromDate)}\n📅 إلى: ${formatDate(toDate)}\n💰 السعر: ${quote || '-'}\n\nالرجاء تأكيد الحجز.`;
       const url = `https://wa.me/963981834818?text=${encodeURIComponent(message)}`;
       Linking.openURL(url);
-
     } catch (err) {
       console.error(err);
       Alert.alert('خطأ', err.response?.data?.message || 'فشل في الحجز');
@@ -35,11 +29,16 @@ export default function ConfirmBooking() {
 
   return (
     <View style={styles.container}>
+      {/* زر الرجوع */}
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Text style={styles.backButtonText}>◀ رجوع</Text>
+      </TouchableOpacity>
+
       <Text style={styles.title}>تأكيد الحجز</Text>
 
       <View style={styles.card}>
         <Text style={styles.cardLabel}>المستخدم:</Text>
-        <Text style={styles.cardValue}>{AsyncStorage.getItem('userName') || 'غير معروف'}</Text>
+        <Text style={styles.cardValue}>{userName || 'غير معروف'}</Text>
       </View>
 
       <View style={styles.card}>
@@ -71,6 +70,8 @@ export default function ConfirmBooking() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f2f2f2', padding: 20, alignItems: 'center' },
+  backButton: { alignSelf: 'flex-start', marginBottom: 10 },
+  backButtonText: { fontSize: 16, color: '#0077b6', fontWeight: 'bold' },
   title: { fontSize: 28, fontWeight: 'bold', marginVertical: 20, color: '#0077b6' },
   card: { 
     width: '100%', 

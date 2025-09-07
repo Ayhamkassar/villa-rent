@@ -1,5 +1,6 @@
 import { API_URL } from '@/server/config';
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient'; // 👈 استدعاء المكتبة
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -21,7 +22,6 @@ const RegisterScreen = () => {
   const [password, setPassword] = useState('');
 
   const isEmailValid = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  // Must match server rule: at least 8 chars, one lowercase, one uppercase, and one digit
   const isPasswordValid = (password) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
 
   const handleRegister = async () => {
@@ -46,11 +46,15 @@ const RegisterScreen = () => {
       Alert.alert('خطأ', error.response?.data?.message || 'حدث خطأ أثناء إنشاء الحساب');
     }
   };
+
   return (
-    
+    <LinearGradient
+      colors={['#6dd5ed', '#2193b0']} // 👈 متدرج لوني أزرق سماوي
+      style={styles.background}
+    >
       <View style={styles.formBox}>
         <Text style={styles.title}>إنشاء حساب</Text>
-  
+
         <TextInput
           style={styles.input}
           placeholder="الاسم"
@@ -73,17 +77,17 @@ const RegisterScreen = () => {
           value={password}
           onChangeText={setPassword}
         />
-  
+
         <TouchableOpacity style={styles.button} onPress={handleRegister}>
           <Text style={styles.buttonText}>إنشاء الحساب</Text>
         </TouchableOpacity>
-  
+
         <TouchableOpacity onPress={() => router.push('/pages/Login/Login')}>
           <Text style={styles.link}>لديك حساب؟ سجل الدخول</Text>
         </TouchableOpacity>
       </View>
+    </LinearGradient>
   );
-  
 };
 
 export default RegisterScreen;
@@ -98,11 +102,15 @@ const styles = StyleSheet.create({
   },
   formBox: {
     width: '85%',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 15,
     padding: 20,
     alignItems: 'center',
-    justifyContent: 'center', // يضمن التمركز
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 5, // للـ Android
   },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 15, color: '#333' },
   input: {

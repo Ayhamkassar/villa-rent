@@ -1,11 +1,12 @@
 import { API_URL } from '@/server/config';
-import { Ionicons } from '@expo/vector-icons'; // ✅ إضافة الأيقونات
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Button, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Button, Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -81,7 +82,7 @@ export default function ProfileScreen() {
           }
         );
 
-        fetchUser(userId, token); 
+        fetchUser(userId, token);
       }
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -127,42 +128,60 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          colors={['#1E90FF']}
-          tintColor="#1E90FF"
-          title="جارٍ التحديث..."
-          titleColor="#1E90FF"
-        />
-      }
+    <LinearGradient
+      colors={['#74ebd5', '#ACB6E5']}
+      style={{ flex: 1 }}
     >
-      {/* ✅ زر حول التطبيق */}
-      <TouchableOpacity style={styles.aboutBtn} onPress={() => router.push('/pages/About/About')}>
-        <Ionicons name="help-circle-outline" size={28} color="#1E90FF" />
-      </TouchableOpacity>
-
-   
-      <Button title="تغيير الصورة" onPress={pickImage} />
-      {isEditingName ? (
-        <View style={styles.nameRow}>
-          <TextInput style={styles.nameInput} value={newName} onChangeText={setNewName} />
-          <TouchableOpacity style={styles.saveBtn} onPress={saveName}><Text style={styles.saveText}>حفظ</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => { setIsEditingName(false); setNewName(user?.name || ''); }}><Text style={styles.cancelText}>إلغاء</Text></TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity onPress={() => setIsEditingName(true)}>
-          <Text style={styles.name}>{user?.name}</Text>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#1E90FF']}
+            tintColor="#1E90FF"
+            title="جارٍ التحديث..."
+            titleColor="#1E90FF"
+          />
+        }
+      >
+        {/* ✅ زر حول التطبيق */}
+        <TouchableOpacity style={styles.aboutBtn} onPress={() => router.push('/pages/About/About')}>
+          <Ionicons name="help-circle-outline" size={28} color="#1E90FF" />
         </TouchableOpacity>
-      )}
-      <Text style={styles.email}>{user?.email}</Text>
-      <View style={{ marginTop: 20 }}>
-        <Button title="تسجيل خروج" color="#e74c3c" onPress={handleLogout} />
-      </View>
-    </ScrollView>
+
+        {/* ✅ صورة البروفايل */}
+        <Image
+          source={ user?.profileImage 
+            ? { uri: `${API_URL}/uploads/${user.profileImage}` }
+            :  <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#eee' }]}>
+            <Ionicons name="person-circle-outline" size={100} color="#1E90FF" />
+          </View>
+          }
+          style={styles.avatar}
+        />
+
+        <Button title="تغيير الصورة" onPress={pickImage} />
+
+        {isEditingName ? (
+          <View style={styles.nameRow}>
+            <TextInput style={styles.nameInput} value={newName} onChangeText={setNewName} />
+            <TouchableOpacity style={styles.saveBtn} onPress={saveName}><Text style={styles.saveText}>حفظ</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => { setIsEditingName(false); setNewName(user?.name || ''); }}><Text style={styles.cancelText}>إلغاء</Text></TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => setIsEditingName(true)}>
+            <Text style={styles.name}>{user?.name}</Text>
+          </TouchableOpacity>
+        )}
+
+        <Text style={styles.email}>{user?.email}</Text>
+
+        <View style={{ marginTop: 20 }}>
+          <Button title="تسجيل خروج" color="#e74c3c" onPress={handleLogout} />
+        </View>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
@@ -172,7 +191,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f9f9f9',
   },
   aboutBtn: {
     position: 'absolute',
