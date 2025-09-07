@@ -658,7 +658,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
     });
     await newBooking.save();
 
-    res.json({ message: 'تم الحجز بنجاح', booking: newBooking });
+    res.json({ message: 'تم الحجز بنجاح', bookings: newBooking });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'خطأ في السيرفر' });
