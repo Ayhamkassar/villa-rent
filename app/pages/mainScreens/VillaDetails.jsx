@@ -67,6 +67,7 @@ export default function VillaDetails() {
         <Text style={styles.type}>نوع المزرعة: {villa?.type === 'sale' ? 'بيع' : 'إيجار'}</Text>
         <Text style={styles.address}>العنوان: {villa?.address?.address || villa?.address || 'غير محدد'}</Text>
         <Text style={styles.address}>رقم الهاتف: {villa?.contactNumber || '-'}</Text>
+        <Text style={styles.address}>رقم الهاتف: {villa?.contactNumber || '-'}</Text>
 
         <Text style={[styles.sectionTitle, { alignSelf: 'flex-end' }]}>التفاصيل الإضافية</Text>
         <View style={styles.extraDetails}>
@@ -139,30 +140,51 @@ export default function VillaDetails() {
           </Text>
           <Text style={styles.bookingText}>الحالة: {booking.status}</Text>
 
-          {booking.status !== 'cancelled' && (
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={async () => {
-                try {
-                  await axios.put(`${API_URL}/api/farms/${villa._id}/bookings/${booking._id}/status`, {
-                    status: 'cancelled'
-                  });
-                  Alert.alert('تم إلغاء الحجز');
-                  // تحديث القائمة
-                  fetchBookings();
-                } catch (err) {
-                  Alert.alert('خطأ', 'فشل في إلغاء الحجز');
-                }
-              }}
-            >
-              <Text style={styles.cancelButtonText}>إلغاء الحجز</Text>
-            </TouchableOpacity>
-          )}
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 5 }}>
+            {booking.status === 'pending' && (
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={async () => {
+                  try {
+                    await axios.put(`${API_URL}/api/farms/${villa._id}/bookings/${booking._id}/status`, {
+                      status: 'confirmed'
+                    });
+                    Alert.alert('تم تأكيد الحجز');
+                    fetchBookings();
+                  } catch (err) {
+                    Alert.alert('خطأ', 'فشل في تأكيد الحجز');
+                  }
+                }}
+              >
+                <Text style={styles.confirmButtonText}>تأكيد الحجز</Text>
+              </TouchableOpacity>
+            )}
+
+            {booking.status !== 'cancelled' && (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={async () => {
+                  try {
+                    await axios.put(`${API_URL}/api/farms/${villa._id}/bookings/${booking._id}/status`, {
+                      status: 'cancelled'
+                    });
+                    Alert.alert('تم إلغاء الحجز');
+                    fetchBookings();
+                  } catch (err) {
+                    Alert.alert('خطأ', 'فشل في إلغاء الحجز');
+                  }
+                }}
+              >
+                <Text style={styles.cancelButtonText}>إلغاء الحجز</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       ))
     )}
   </View>
 )}
+
     </LinearGradient>
   );
 }
