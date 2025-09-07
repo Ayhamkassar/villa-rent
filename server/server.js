@@ -647,7 +647,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
     }
 
     // إنشاء الحجز
-    const newBooking = new Booking({
+    const newBooking = new bookings({
       farmId: farm._id,
       userId,
       userName,

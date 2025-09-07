@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, Modal, Linking } from 'react-native';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import axios from 'axios';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Calendar } from 'react-native-calendars';
 import { API_URL } from "@/server/config";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Calendar } from 'react-native-calendars';
 
 export default function FarmDetails() {
   const { id } = useLocalSearchParams();
   const [farm, setFarm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const router = useRouter();
 
   const [markedDates, setMarkedDates] = useState({});
@@ -19,6 +21,19 @@ export default function FarmDetails() {
   const [toDate, setToDate] = useState(null);
   const [quote, setQuote] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userId = await AsyncStorage.getItem('userId'); // تأكد أنه مخزن بعد تسجيل الدخول
+        if (!userId) return;
+        const res = await axios.get(`${API_URL}/api/users/${userId}`);
+        setCurrentUser(res.data);
+      } catch (err) {
+        console.error('خطأ في جلب بيانات المستخدم', err);
+      }
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     const fetchFarm = async () => {
@@ -132,14 +147,16 @@ export default function FarmDetails() {
         from: fromDate,
         to: toDate
       });
-
       router.push({
         pathname: '../FarmDetails/ConfirmBooking',
         params: {
-          farmId: id,
+          farmId:farm._id,
+          farmName:farm?.name,
           fromDate,
           toDate,
-          quote: data.totalPrice
+          quote: data.totalPrice,
+          userId: currentUser._id,
+          userName: currentUser.name
         }
       });
 

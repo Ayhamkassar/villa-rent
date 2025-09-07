@@ -11,6 +11,7 @@ export default function ConfirmBooking() {
   const formatDate = (date) => new Date(date).toLocaleDateString();
 
   const handleConfirm = async () => {
+    console.log(farmId,userId,fromDate,toDate)
     if (!farmId || !userId || !fromDate || !toDate) {
       return Alert.alert('خطأ', 'الرجاء التأكد من جميع بيانات الحجز');
     }
