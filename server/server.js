@@ -101,47 +101,70 @@ res.status(500).json({ message: 'حدث خطأ في السيرفر' });
 }
 });
 // =====================
-// إعادة إرسال الإيميل
+// إعادة إرسال رمز التفعيل
 // =====================
-app.post('/api/resend-activation', async()=>{
-  
+app.post('/api/resend-activation', async (req, res) => {
   try {
-    const verificationToken = crypto.randomBytes(20).toString('hex');
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword,isVerified: false,
-      verificationToken,
-      verificationExpires: Date.now() + 3600000 });
-    await newUser.save();
+    const { email } = req.body;
 
+    if (!email) {
+      return res.status(400).json({ message: 'يرجى إدخال البريد الإلكتروني' });
+    }
+
+    // البحث عن المستخدم
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    // التحقق من حالة التفعيل
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'الحساب مفعل بالفعل' });
+    }
+
+    // توليد رمز تفعيل جديد
+    const verificationToken = crypto.randomBytes(20).toString('hex');
+    
+    // تحديث المستخدم برمز التفعيل الجديد
+    user.verificationToken = verificationToken;
+    user.verificationExpires = Date.now() + 3600000; // ساعة واحدة
+    await user.save();
+
+    // إعداد الرسالة
     const mailOptions = {
-      from: process.env.user,
+      from: process.env.user || 'myvilla234@gmail.com',
       to: email,
-      subject: 'تفعيل الحساب',
-      text: `مرحبا ${name},\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\n`
+      subject: 'تفعيل الحساب - رمز جديد',
+      text: `مرحبا ${user.name},\n\nتم إرسال رمز تفعيل جديد لحسابك.\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\nالرابط صالح لمدة ساعة واحدة.\n\nإذا لم تطلب هذا الرمز، تجاهل هذه الرسالة.`
     };
 
-   await transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('خطأ في إرسال البريد:', error);
-      } else {
-        console.log('Email sent: ' + info.response);
-      }
+    // إرسال البريد
+    await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('خطأ في إرسال البريد:', error);
+          reject(error);
+        } else {
+          console.log('Email sent: ' + info.response);
+          resolve(info);
+        }
+      });
     });
-    
 
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    res.status(201).json({
-      message: 'تم إنشاء الحساب بنجاح',
-      token,
-      user: { id: newUser._id, name: newUser.name, email: newUser.email },
+    res.json({ 
+      message: 'تم إرسال رمز التفعيل الجديد إلى بريدك الإلكتروني',
+      email: email
     });
+
   } catch (err) {
-    console.log(err)
-    res.status(500).json({ message: 'حدث خطأ أثناء إنشاء الحساب' });
+    console.error('خطأ في إعادة إرسال رمز التفعيل:', err);
+    res.status(500).json({ message: 'حدث خطأ أثناء إرسال رمز التفعيل' });
   }
 });
 
+// =====================
+// تفعيل الحساب
+// =====================
 app.get('/api/verify/:token', async (req, res) => {
   try {
     const user = await User.findOne({
@@ -149,17 +172,30 @@ app.get('/api/verify/:token', async (req, res) => {
       verificationExpires: { $gt: Date.now() }
     });
 
-    if (!user) return res.status(400).json({ message: 'الرابط غير صالح أو انتهت صلاحيته' });
+    if (!user) {
+      return res.status(400).json({ 
+        message: 'الرابط غير صالح أو انتهت صلاحيته' 
+      });
+    }
 
+    // تفعيل الحساب
     user.isVerified = true;
     user.verificationToken = null;
     user.verificationExpires = null;
-
     await user.save();
 
-    res.json({ message: 'تم تفعيل الحساب بنجاح' });
+    res.json({ 
+      message: 'تم تفعيل الحساب بنجاح',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isVerified: user.isVerified
+      }
+    });
+
   } catch (err) {
-    console.error(err);
+    console.error('خطأ في تفعيل الحساب:', err);
     res.status(500).json({ message: 'خطأ في السيرفر' });
   }
 });
@@ -167,75 +203,109 @@ app.get('/api/verify/:token', async (req, res) => {
 // تسجيل مستخدم جديد
 // =====================
 app.post('/api/register', async (req, res) => {
-  const { name, email, password } = req.body;
-
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).json({ message: 'البريد الإلكتروني مسجل مسبقاً' });
-  }
-
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-  if (!passwordRegex.test(password)) {
-    return res.status(400).json({
-      message: 'كلمة المرور يجب أن تكون 8 محارف على الأقل وتحتوي على حرف كبير وحرف صغير ورقم'
-    });
-  }
-
   try {
+    const { name, email, password } = req.body;
+
+    // التحقق من البيانات المطلوبة
+    if (!name || !email || !password) {
+      return res.status(400).json({ 
+        message: 'يرجى إدخال جميع البيانات المطلوبة' 
+      });
+    }
+
+    // التحقق من وجود المستخدم
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ 
+        message: 'البريد الإلكتروني مسجل مسبقاً' 
+      });
+    }
+
+    // التحقق من قوة كلمة المرور
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        message: 'كلمة المرور يجب أن تكون 8 محارف على الأقل وتحتوي على حرف كبير وحرف صغير ورقم'
+      });
+    }
+
+    // توليد رمز التفعيل
     const verificationToken = crypto.randomBytes(20).toString('hex');
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword,isVerified: false,
+    
+    // إنشاء المستخدم الجديد
+    const newUser = new User({ 
+      name, 
+      email, 
+      password: hashedPassword,
+      isVerified: false,
       verificationToken,
-      verificationExpires: Date.now() + 3600000 });
+      verificationExpires: Date.now() + 3600000 // ساعة واحدة
+    });
     await newUser.save();
 
+    // إعداد رسالة التفعيل
     const mailOptions = {
-      from: process.env.user,
+      from: process.env.user || 'myvilla234@gmail.com',
       to: email,
       subject: 'تفعيل الحساب',
-      text: `مرحبا ${name},\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\n`
+      text: `مرحبا ${name},\n\nمرحباً بك في تطبيق فيلا رنت!\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\nالرابط صالح لمدة ساعة واحدة.\n\nإذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.`
     };
 
-   await transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('خطأ في إرسال البريد:', error);
-      } else {
-        console.log('Email sent: ' + info.response);
-      }
+    // إرسال البريد
+    await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('خطأ في إرسال البريد:', error);
+          reject(error);
+        } else {
+          console.log('Email sent: ' + info.response);
+          resolve(info);
+        }
+      });
     });
-    
 
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // إنشاء JWT token
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '1h' });
 
     res.status(201).json({
-      message: 'تم إنشاء الحساب بنجاح',
+      message: 'تم إنشاء الحساب بنجاح. يرجى تفعيل حسابك عبر البريد الإلكتروني',
       token,
-      user: { id: newUser._id, name: newUser.name, email: newUser.email },
+      user: { 
+        id: newUser._id, 
+        name: newUser.name, 
+        email: newUser.email,
+        isVerified: newUser.isVerified
+      }
     });
+
   } catch (err) {
-    console.log(err)
+    console.error('خطأ في التسجيل:', err);
     res.status(500).json({ message: 'حدث خطأ أثناء إنشاء الحساب' });
   }
 });
 
-app.get('/api/verify/:token', async (req, res) => {
+// =====================
+// التحقق من حالة التفعيل
+// =====================
+app.get('/api/check-verification/:email', async (req, res) => {
   try {
-    const user = await User.findOne({
-      verificationToken: req.params.token,
-      verificationExpires: { $gt: Date.now() }
+    const { email } = req.params;
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    res.json({
+      email: user.email,
+      isVerified: user.isVerified,
+      hasVerificationToken: !!user.verificationToken,
+      tokenExpires: user.verificationExpires
     });
 
-    if (!user) return res.status(400).json({ message: 'الرابط غير صالح أو انتهت صلاحيته' });
-
-    user.isVerified = true;
-    user.verificationToken = null;
-    user.verificationExpires = null;
-
-    await user.save();
-
-    res.json({ message: 'تم تفعيل الحساب بنجاح' });
   } catch (err) {
-    console.error(err);
+    console.error('خطأ في التحقق من حالة التفعيل:', err);
     res.status(500).json({ message: 'خطأ في السيرفر' });
   }
 });
@@ -624,7 +694,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
     const farm = await Farm.findById(req.params.id);
     if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
 
-    // التحقق من التداخل
+    // التحقق من التداخل - البحث في جدول bookings المنفصل
     const existingBookings = await bookings.find({ farmId: farm._id });
     const isOverlap = existingBookings.some(b => {
       const bStart = new Date(b.from);
@@ -638,7 +708,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
     // حساب السعر
     let totalPrice = 0;
     let current = new Date(from);
-    while (current <= new Date(to)) {
+    while (current < new Date(to)) { // تغيير <= إلى < لتجنب حساب يوم إضافي
       const day = current.getDay();
       if (day === 4 || day === 5 || day === 6) {
         totalPrice += farm.weekendPrice;
@@ -648,7 +718,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
       current.setDate(current.getDate() + 1);
     }
 
-    // إنشاء الحجز
+    // إنشاء الحجز في جدول bookings المنفصل
     const newBooking = new bookings({
       farmId: farm._id,
       userId,
@@ -660,12 +730,12 @@ app.post('/api/farms/book/:id', async (req, res) => {
     });
     await newBooking.save();
 
-    // Add the booking to the farm's bookings array
-    await Farm.findByIdAndUpdate(farm._id, {
-      $push: { bookings: newBooking._id }
-    });
+    // إزالة هذا الجزء - لا نحتاج لإضافة الحجز إلى المزرعة
+    // await Farm.findByIdAndUpdate(farm._id, {
+    //   $push: { bookings: newBooking._id }
+    // });
 
-    res.json({ message: 'تم الحجز بنجاح', bookings: newBooking });
+    res.json({ message: 'تم الحجز بنجاح', booking: newBooking });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'خطأ في السيرفر' });
@@ -703,10 +773,11 @@ app.get('/api/users/:id', async (req, res) => {
 // =====================
 app.get('/api/bookings/:farmId', async (req, res) => {
   try {
-    const bookings = await bookings.find({ farmId: req.params.farmId })
+    const farmBookings = await bookings.find({ farmId: req.params.farmId })
       .populate('userId', 'name email');
-    res.json(bookings);
+    res.json(farmBookings);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'خطأ في السيرفر' });
   }
 });
@@ -754,14 +825,19 @@ app.put('/api/users/:id', async (req, res) => {
 app.put('/api/bookings/:bookingId/status', async (req, res) => {
   try {
     const { status } = req.body;
-    const booking = await bookings.findById(req.params.bookingId);
-    if (!booking) return res.status(404).json({ message: 'الحجز غير موجود' });
-
-    booking.status = status;
-    await booking.save();
-
+    const booking = await bookings.findByIdAndUpdate(
+      req.params.bookingId,
+      { status },
+      { new: true }
+    ).populate('userId', 'name email');
+    
+    if (!booking) {
+      return res.status(404).json({ message: 'الحجز غير موجود' });
+    }
+    
     res.json({ message: 'تم تحديث حالة الحجز', booking });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'خطأ في السيرفر' });
   }
 });

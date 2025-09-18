@@ -1,21 +1,21 @@
+import { API_URL } from "@/server/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Picker } from '@react-native-picker/picker';
+import axios from "axios";
+import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  ScrollView,
-  Alert,
-  Platform,
-  KeyboardAvoidingView,
+  View,
 } from "react-native";
-import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from "expo-image-picker";
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL } from "@/server/config";
 
 export default function AddFarm() {
   const [loading, setLoading] = useState(false);
@@ -116,7 +116,6 @@ export default function AddFarm() {
         }));
       }
     } catch (error) {
-      console.log(error);
       Alert.alert("خطأ", "حدث خطأ أثناء اختيار الصور.");
     }
   };

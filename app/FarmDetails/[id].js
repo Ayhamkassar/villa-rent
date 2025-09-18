@@ -7,7 +7,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import { bookings } from "../../server/Models/bookings";
 
 export default function FarmDetails() {
   const { id } = useLocalSearchParams();
@@ -42,19 +41,45 @@ export default function FarmDetails() {
         const response = await axios.get(`${API_URL}/api/farms/${id}`);
         setFarm(response.data);
 
-      const booked = {};
-      response.data.bookings?.forEach(booking => {
-        const current = new Date(booking.from);
-        const last = new Date(booking.to);
+        const booked = {};
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // إزالة الوقت لضمان المقارنة الصحيحة
 
-        while (current <= last){
-          const dateStr = current.toISOString().split('T')[0];
-          booked[dateStr] = {disabled : true,disableTouchEvent: true,color:'red',textColor : 'white'};
-          current.setDate(current.getDate()+1)
+        // إضافة الأيام السابقة كأيام معطلة
+        const pastDates = {};
+        const startDate = new Date(today);
+        startDate.setDate(startDate.getDate() - 365); // سنة سابقة كحد أقصى
+
+        while (startDate < today) {
+          const dateStr = startDate.toISOString().split('T')[0];
+          pastDates[dateStr] = {
+            disabled: true,
+            disableTouchEvent: true,
+            color: '#ccc',
+            textColor: '#999'
+          };
+          startDate.setDate(startDate.getDate() + 1);
         }
-      });
 
-      setMarkedDates(booked)
+        // إضافة الأيام المحجوزة
+        response.data.bookings?.forEach(booking => {
+          const current = new Date(booking.from);
+          const last = new Date(booking.to);
+
+          while (current <= last) {
+            const dateStr = current.toISOString().split('T')[0];
+            booked[dateStr] = {
+              disabled: true,
+              disableTouchEvent: true,
+              color: 'red',
+              textColor: 'white'
+            };
+            current.setDate(current.getDate() + 1);
+          }
+        });
+
+        // دمج الأيام السابقة مع الأيام المحجوزة
+        setMarkedDates({ ...pastDates, ...booked });
       } catch (err) {
         setError(err.response?.data?.message || 'خطأ في جلب بيانات المزرعة');
       } finally {
@@ -74,34 +99,65 @@ export default function FarmDetails() {
       current.setDate(current.getDate() + 1);
     }
     return range;
-  };const onDayPress = (day) => {
+  };
+
+  const onDayPress = (day) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(day.dateString);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    // منع اختيار الأيام السابقة
+    if (selectedDate < today) {
+      return Alert.alert('خطأ', 'لا يمكن حجز أيام سابقة');
+    }
+
     // لو اليوم محجوز، ما نسمح بالضغط
-    if (markedDates[day.dateString]?.disabled) return;
-  
+    if (markedDates[day.dateString]?.disabled) {
+      return Alert.alert('خطأ', 'هذا اليوم محجوز مسبقاً');
+    }
+
     // إذا سبق الاختيار (بداية ونهاية)، وإضغط على أي يوم جديد => إعادة الاختيار
     if (fromDate && toDate) {
       setFromDate(day.dateString);
       setToDate(null);
-  
-      // إعادة تلوين الأيام المحجوزة فقط
-      const booked = {};
-      bookings?.forEach(booking => {
+
+      // إعادة تلوين الأيام المحجوزة والأيام السابقة
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const pastDates = {};
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - 365);
+
+      while (startDate < today) {
+        const dateStr = startDate.toISOString().split('T')[0];
+        pastDates[dateStr] = {
+          disabled: true,
+          disableTouchEvent: true,
+          color: '#ccc',
+          textColor: '#999'
+        };
+        startDate.setDate(startDate.getDate() + 1);
+      }
+
+      const booked = { ...pastDates };
+      farm?.bookings?.forEach(booking => {
         const current = new Date(booking.from);
         const last = new Date(booking.to);
-  
+
         while (current <= last) {
           const dateStr = current.toISOString().split('T')[0];
           booked[dateStr] = { disabled: true, disableTouchEvent: true, color: 'red', textColor: 'white' };
           current.setDate(current.getDate() + 1);
         }
       });
-  
+
       // إضافة اليوم الجديد كبداية
       booked[day.dateString] = { startingDay: true, color: '#0077b6', textColor: 'white' };
       setMarkedDates(booked);
       return;
     }
-  
+
     if (!fromDate) {
       setFromDate(day.dateString);
       setMarkedDates(prev => ({
@@ -111,36 +167,94 @@ export default function FarmDetails() {
     } else {
       const range = getDatesRange(fromDate, day.dateString);
       const marked = { ...markedDates };
-  
+
       let validRange = true;
       range.forEach(date => {
         if (marked[date]?.disabled) validRange = false;
       });
-  
+
       if (!validRange) {
-        return Alert.alert('خطأ', 'الفترة المختارة تحتوي على أيام محجوزة');
+        return Alert.alert('خطأ', 'الفترة المختارة تحتوي على أيام محجوزة أو سابقة');
       }
-  
-      range.forEach((date, index) => {
-        if (index === 0) {
-          marked[date] = { startingDay: true, color: '#0077b6', textColor: 'white' };
-        } else if (index === range.length - 1) {
-          marked[date] = { endingDay: true, color: '#0077b6', textColor: 'white' };
-        } else {
-          marked[date] = { color: '#90e0ef', textColor: 'white' };
-        }
-      });
-  
+
+      if (range.length === 1) {
+        marked[range[0]] = { startingDay: true, endingDay: true, color: '#0077b6', textColor: 'white' };
+      } else {
+        range.forEach((date, index) => {
+          if (index === 0) {
+            marked[date] = { startingDay: true, color: '#0077b6', textColor: 'white' };
+          } else if (index === range.length - 1) {
+            marked[date] = { endingDay: true, color: '#0077b6', textColor: 'white' };
+          } else {
+            marked[date] = { color: '#90e0ef', textColor: 'white' };
+          }
+        });
+      }
+
       setMarkedDates(marked);
       setToDate(day.dateString);
     }
   };
-  
-  
 
-  const handleBooking = async () => {
+
+
+  // دالة حجز يوم واحد
+  const handleSingleDayBooking = async () => {
+    if (!fromDate) {
+      return Alert.alert('خطأ', 'يرجى اختيار يوم من التقويم');
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(fromDate);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      return Alert.alert('خطأ', 'لا يمكن حجز أيام سابقة');
+    }
+
+    try {
+      // إضافة يوم واحد لتاريخ النهاية لحجز يوم واحد
+      const endDate = new Date(fromDate);
+      endDate.setDate(endDate.getDate() + 1);
+      const endDateString = endDate.toISOString().split('T')[0];
+
+      const { data } = await axios.post(`${API_URL}/api/farms/quote/${id}`, {
+        from: fromDate,
+        to: endDateString // اليوم التالي
+      });
+      
+      router.push({
+        pathname: '../FarmDetails/ConfirmBooking',
+        params: {
+          farmId: farm._id,
+          farmName: farm?.name,
+          fromDate,
+          toDate: fromDate, // نعرض للمستخدم نفس اليوم
+          quote: data.totalPrice,
+          userId: currentUser._id,
+          userName: currentUser.name
+        }
+      });
+
+    } catch (err) {
+      Alert.alert('خطأ', err.response?.data?.message || 'تعذّر حساب السعر');
+    }
+  };
+
+  // دالة حجز عدة أيام
+  const handleMultiDayBooking = async () => {
     if (!fromDate || !toDate) {
       return Alert.alert('خطأ', 'يرجى اختيار فترة (من – إلى) من التقويم');
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(fromDate);
+    startDate.setHours(0, 0, 0, 0);
+
+    if (startDate < today) {
+      return Alert.alert('خطأ', 'لا يمكن حجز أيام سابقة');
     }
 
     try {
@@ -148,12 +262,11 @@ export default function FarmDetails() {
         from: fromDate,
         to: toDate
       });
-      console.log(currentUser)
       router.push({
         pathname: '../FarmDetails/ConfirmBooking',
         params: {
-          farmId:farm._id,
-          farmName:farm?.name,
+          farmId: farm._id,
+          farmName: farm?.name,
           fromDate,
           toDate,
           quote: data.totalPrice,
@@ -311,6 +424,7 @@ export default function FarmDetails() {
               markingType={'period'}
               markedDates={markedDates}
               onDayPress={onDayPress}
+              minDate={new Date().toISOString().split('T')[0]} // منع اختيار الأيام السابقة
             />
 
             {quote && (
@@ -319,16 +433,34 @@ export default function FarmDetails() {
               </Text>
             )}
 
-            <TouchableOpacity
-              style={styles.bookButton}
-              onPress={handleBooking}
-            >
-              <Text style={styles.bookButtonText}>حجز</Text>
-            </TouchableOpacity>
+            {/* أزرار الحجز */}
+            <View style={styles.bookingButtonsContainer}>
+              {/* زر حجز يوم واحد */}
+              <TouchableOpacity
+                style={[styles.bookButton, styles.singleDayButton]}
+                onPress={handleSingleDayBooking}
+                disabled={!fromDate}
+              >
+                <Text style={styles.bookButtonText}>
+                  حجز يوم واحد
+                </Text>
+              </TouchableOpacity>
+
+              {/* زر حجز عدة أيام */}
+              <TouchableOpacity
+                style={[styles.bookButton, styles.multiDayButton]}
+                onPress={handleMultiDayBooking}
+                disabled={!fromDate || !toDate}
+              >
+                <Text style={styles.bookButtonText}>
+                  حجز عدة أيام
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <TouchableOpacity style={styles.bookButton} onPress={() => Linking.openURL(`https://wa.me/963949599136`)}>
-              <Text style={styles.bookButtonText}>تواصل</Text>
+            <Text style={styles.bookButtonText}>تواصل</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -379,13 +511,28 @@ const styles = StyleSheet.create({
   extraDetails: { width: '100%', padding: 10, backgroundColor: '#d0f0fd', borderRadius: 10, marginBottom: 20 },
   detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 },
   detailText: { fontSize: 16, color: '#0077b6' },
-  bookButton: {
-    backgroundColor: '#0077b6',
-    paddingVertical: 15,
-    borderRadius: 10,
+  bookingButtonsContainer: {
     width: '100%',
-    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
     marginTop: 10,
   },
-  bookButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  singleDayButton: {
+    flex: 1,
+    backgroundColor: '#28a745', // لون أخضر لليوم الواحد
+  },
+  multiDayButton: {
+    flex: 1,
+    backgroundColor: '#0077b6', // لون أزرق لعدة أيام
+  },
+  bookButton: {
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  bookButtonText: { 
+    color: 'white', 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
 });

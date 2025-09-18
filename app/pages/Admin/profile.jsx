@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Button, Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -16,7 +16,9 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [token, setToken] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
 
   useEffect(() => {
     const init = async () => {
@@ -40,6 +42,7 @@ export default function ProfileScreen() {
       });
       setUser(res.data);
       setNewName(res.data?.name || '');
+      setNewEmail(res.data?.email || '');
     } catch (error) {
       console.error("Error fetching user:", error);
       Alert.alert("خطأ", "فشل في جلب بيانات المستخدم");
@@ -98,15 +101,53 @@ export default function ProfileScreen() {
       });
       setUser((u) => ({ ...u, name: newName.trim() }));
       setIsEditingName(false);
+      Alert.alert('نجح', 'تم تحديث الاسم بنجاح');
     } catch (err) {
       Alert.alert('خطأ', err.response?.data?.message || 'فشل تحديث الاسم');
     }
   };
 
+  const saveEmail = async () => {
+    try {
+      if (!newEmail?.trim()) return Alert.alert('تنبيه', 'يرجى إدخال إيميل صالح');
+      
+      // التحقق من صيغة الإيميل
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmail.trim())) {
+        return Alert.alert('تنبيه', 'يرجى إدخال إيميل صالح');
+      }
+
+      await axios.put(`${API_URL}/api/users/${userId}`, { email: newEmail.trim() }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUser((u) => ({ ...u, email: newEmail.trim() }));
+      setIsEditingEmail(false);
+      Alert.alert('نجح', 'تم تحديث الإيميل بنجاح');
+    } catch (err) {
+      Alert.alert('خطأ', err.response?.data?.message || 'فشل تحديث الإيميل');
+    }
+  };
+
   const handleLogout = async () => {
-    await AsyncStorage.clear();
-    setUser(null);
-    router.replace('/pages/Login/Login');
+    Alert.alert(
+      'تسجيل الخروج',
+      'هل أنت متأكد من تسجيل الخروج؟',
+      [
+        {
+          text: 'إلغاء',
+          style: 'cancel',
+        },
+        {
+          text: 'تسجيل الخروج',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.clear();
+            setUser(null);
+            router.replace('/pages/Login/Login');
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -122,7 +163,9 @@ export default function ProfileScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.infoText}>أنت غير مسجل دخول</Text>
-        <Button title="تسجيل الدخول" onPress={() => router.push('/pages/Login/Login')} />
+        <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/pages/Login/Login')}>
+          <Text style={styles.loginBtnText}>تسجيل الدخول</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -145,41 +188,114 @@ export default function ProfileScreen() {
           />
         }
       >
-        {/* ✅ زر حول التطبيق */}
+        {/* زر حول التطبيق */}
         <TouchableOpacity style={styles.aboutBtn} onPress={() => router.push('/pages/About/About')}>
           <Ionicons name="help-circle-outline" size={28} color="#1E90FF" />
         </TouchableOpacity>
 
-        {/* ✅ صورة البروفايل */}
-        <Image
-          source={ user?.profileImage 
-            ? { uri: `${API_URL}/uploads/${user.profileImage}` }
-            :  <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#eee' }]}>
-            <Ionicons name="person-circle-outline" size={100} color="#1E90FF" />
-          </View>
-          }
-          style={styles.avatar}
-        />
-
-        <Button title="تغيير الصورة" onPress={pickImage} />
-
-        {isEditingName ? (
-          <View style={styles.nameRow}>
-            <TextInput style={styles.nameInput} value={newName} onChangeText={setNewName} />
-            <TouchableOpacity style={styles.saveBtn} onPress={saveName}><Text style={styles.saveText}>حفظ</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => { setIsEditingName(false); setNewName(user?.name || ''); }}><Text style={styles.cancelText}>إلغاء</Text></TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity onPress={() => setIsEditingName(true)}>
-            <Text style={styles.name}>{user?.name}</Text>
+        {/* صورة البروفايل */}
+        <View style={styles.avatarContainer}>
+          {user?.profileImage ? (
+            <Image
+              source={{ uri: `${API_URL}${user.profileImage}` }}
+              style={styles.avatar}
+            />
+          ) : (
+            <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#eee' }]}>
+              <Ionicons name="person-circle-outline" size={100} color="#1E90FF" />
+            </View>
+          )}
+          
+          <TouchableOpacity style={styles.changeImageBtn} onPress={pickImage}>
+            <Ionicons name="camera" size={20} color="#fff" />
+            <Text style={styles.changeImageText}>تغيير الصورة</Text>
           </TouchableOpacity>
-        )}
-
-        <Text style={styles.email}>{user?.email}</Text>
-
-        <View style={{ marginTop: 20 }}>
-          <Button title="تسجيل خروج" color="#e74c3c" onPress={handleLogout} />
         </View>
+
+        {/* معلومات المستخدم */}
+        <View style={styles.userInfoContainer}>
+          {/* الاسم */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>الاسم</Text>
+            {isEditingName ? (
+              <View style={styles.editRow}>
+                <TextInput 
+                  style={styles.textInput} 
+                  value={newName} 
+                  onChangeText={setNewName}
+                  placeholder="أدخل اسمك"
+                />
+                <TouchableOpacity style={styles.saveBtn} onPress={saveName}>
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.cancelBtn} 
+                  onPress={() => { 
+                    setIsEditingName(false); 
+                    setNewName(user?.name || ''); 
+                  }}
+                >
+                  <Ionicons name="close" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.displayRow}>
+                <Text style={styles.fieldValue}>{user?.name || 'غير محدد'}</Text>
+                <TouchableOpacity 
+                  style={styles.editBtn} 
+                  onPress={() => setIsEditingName(true)}
+                >
+                  <Ionicons name="pencil" size={20} color="#1E90FF" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* الإيميل */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>البريد الإلكتروني</Text>
+            {isEditingEmail ? (
+              <View style={styles.editRow}>
+                <TextInput 
+                  style={styles.textInput} 
+                  value={newEmail} 
+                  onChangeText={setNewEmail}
+                  placeholder="أدخل إيميلك"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity style={styles.saveBtn} onPress={saveEmail}>
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.cancelBtn} 
+                  onPress={() => { 
+                    setIsEditingEmail(false); 
+                    setNewEmail(user?.email || ''); 
+                  }}
+                >
+                  <Ionicons name="close" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.displayRow}>
+                <Text style={styles.fieldValue}>{user?.email || 'غير محدد'}</Text>
+                <TouchableOpacity 
+                  style={styles.editBtn} 
+                  onPress={() => setIsEditingEmail(true)}
+                >
+                  <Ionicons name="pencil" size={20} color="#1E90FF" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* زر تسجيل الخروج الطويل */}
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+          <Text style={styles.logoutBtnText}>تسجيل الخروج</Text>
+        </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
   );
@@ -188,9 +304,8 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     padding: 20,
+    paddingTop: 60,
   },
   aboutBtn: {
     position: 'absolute',
@@ -198,39 +313,136 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 10,
   },
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
     marginBottom: 15,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#1E90FF',
   },
-  name: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginVertical: 5,
-    color: '#333',
+  changeImageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E90FF',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 5,
   },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 8 },
-  nameInput: { borderWidth: 1, borderColor: '#1E90FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 160, backgroundColor: '#fff' },
-  saveBtn: { backgroundColor: '#1E90FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
-  saveText: { color: '#fff', fontWeight: 'bold' },
-  cancelBtn: { backgroundColor: '#aaa', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
-  cancelText: { color: '#fff' },
-  email: {
+  changeImageText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  userInfoContainer: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  fieldContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  fieldLabel: {
     fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  fieldValue: {
+    fontSize: 18,
     color: '#555',
-    marginBottom: 20,
+    flex: 1,
+  },
+  displayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  textInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#1E90FF',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  editBtn: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#f0f8ff',
+  },
+  saveBtn: {
+    backgroundColor: '#28a745',
+    padding: 10,
+    borderRadius: 8,
+  },
+  cancelBtn: {
+    backgroundColor: '#dc3545',
+    padding: 10,
+    borderRadius: 8,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e74c3c',
+    paddingVertical: 18,
+    paddingHorizontal: 30,
+    borderRadius: 15,
+    width: '100%',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  logoutBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   infoText: {
     fontSize: 18,
-    marginBottom: 10,
+    marginBottom: 20,
     color: '#555',
+    textAlign: 'center',
+  },
+  loginBtn: {
+    backgroundColor: '#1E90FF',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+  },
+  loginBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
+ 
