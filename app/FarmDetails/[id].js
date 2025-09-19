@@ -21,6 +21,7 @@ export default function FarmDetails() {
   const [toDate, setToDate] = useState(null);
   const [quote, setQuote] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [bookings, setBookings] = useState([]);
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -35,11 +36,27 @@ export default function FarmDetails() {
     fetchUser();
   }, []);
 
+  // دالة جلب الحجوزات منفصلة
+  const fetchBookings = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/bookings/${id}`);
+      setBookings(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('خطأ في جلب الحجوزات:', err);
+      setBookings([]);
+      return [];
+    }
+  };
+
   useEffect(() => {
     const fetchFarm = async () => {
       try {
         const response = await axios.get(`${API_URL}/api/farms/${id}`);
         setFarm(response.data);
+
+        // جلب الحجوزات منفصلة
+        const farmBookings = await fetchBookings();
 
         const booked = {};
         const today = new Date();
@@ -61,8 +78,8 @@ export default function FarmDetails() {
           startDate.setDate(startDate.getDate() + 1);
         }
 
-        // إضافة الأيام المحجوزة
-        response.data.bookings?.forEach(booking => {
+        // إضافة الأيام المحجوزة من الحجوزات المحجوزة
+        farmBookings?.forEach(booking => {
           const current = new Date(booking.from);
           const last = new Date(booking.to);
 
@@ -141,7 +158,7 @@ export default function FarmDetails() {
       }
 
       const booked = { ...pastDates };
-      farm?.bookings?.forEach(booking => {
+      bookings?.forEach(booking => {
         const current = new Date(booking.from);
         const last = new Date(booking.to);
 

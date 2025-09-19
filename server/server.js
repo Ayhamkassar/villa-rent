@@ -891,7 +891,9 @@ app.post('/api/farms/quote/:id', async (req, res) => {
       return res.status(400).json({ message: 'تاريخ النهاية يجب أن يكون بعد البداية' });
     }
 
-    const isOverlap = bookings.some(b => {
+    // البحث عن الحجوزات المتداخلة في قاعدة البيانات
+    const existingBookings = await bookings.find({ farmId: farm._id });
+    const isOverlap = existingBookings.some(b => {
       const bStart = new Date(b.from);
       const bEnd   = new Date(b.to);
       return start < bEnd && end > bStart;

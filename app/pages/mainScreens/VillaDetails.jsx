@@ -148,7 +148,14 @@ export default function VillaDetails() {
                   من: {booking.from ? new Date(booking.from).toLocaleDateString() : '-'} 
                   إلى: {booking.to ? new Date(booking.to).toLocaleDateString() : '-'}
                 </Text>
-                <Text style={styles.bookingText}>الحالة: {booking.status}</Text>
+                <Text style={[styles.bookingText, 
+                  booking.status === 'confirmed' ? { color: 'green' } : 
+                  booking.status === 'pending' ? { color: 'orange' } : { color: 'red' }
+                ]}>
+                  الحالة: {booking.status === 'confirmed' ? 'مؤكد' : 
+                          booking.status === 'pending' ? 'في الانتظار' : 
+                          booking.status === 'cancelled' ? 'ملغي' : booking.status}
+                </Text>
 
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 5 }}>
                   {booking.status === 'pending' && (

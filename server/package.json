@@ -1,9 +1,9 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "expo-router/entry",
   "scripts": {
-    "start": "node server.js"
+    "start": "expo start"
   },
   "dependencies": {
     "express": "^5.1.0",

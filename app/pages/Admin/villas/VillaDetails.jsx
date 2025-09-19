@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image, Alert, TouchableOpacity, Modal } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import axios from 'axios';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { API_URL } from '@/server/config';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function VillaDetails() {
   const { id } = useLocalSearchParams();
@@ -33,7 +33,7 @@ export default function VillaDetails() {
     if (!id) return;
     
     setBookingsLoading(true);
-    axios.get(`${API_URL}/api/bookings?villaId=${id}`)
+    axios.get(`${API_URL}/api/bookings/${id}`)
       .then(res => setBookings(res.data))
       .catch(() => setBookings([]))
       .finally(() => setBookingsLoading(false));
@@ -136,14 +136,17 @@ export default function VillaDetails() {
             👤 الحجز بواسطة: {booking.userName || booking.user?.name || 'غير معروف'}
           </Text>
           <Text style={styles.bookingDate}>
-            🗓 من: {booking.startDate ? new Date(booking.startDate).toLocaleDateString('ar-SY') : '-'}
-            {"\n"}إلى: {booking.endDate ? new Date(booking.endDate).toLocaleDateString('ar-SY') : '-'}
+            🗓 من: {booking.from ? new Date(booking.from).toLocaleDateString('ar-SY') : '-'}
+            {"\n"}إلى: {booking.to ? new Date(booking.to).toLocaleDateString('ar-SY') : '-'}
           </Text>
           {booking.status && (
             <Text style={[styles.bookingStatus, 
-              booking.status === 'مؤكد' ? { color: 'green' } : { color: 'red' }
+              booking.status === 'confirmed' ? { color: 'green' } : 
+              booking.status === 'pending' ? { color: 'orange' } : { color: 'red' }
             ]}>
-              الحالة: {booking.status}
+              الحالة: {booking.status === 'confirmed' ? 'مؤكد' : 
+                      booking.status === 'pending' ? 'في الانتظار' : 
+                      booking.status === 'cancelled' ? 'ملغي' : booking.status}
             </Text>
           )}
         </View>
