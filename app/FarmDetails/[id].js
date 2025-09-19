@@ -238,6 +238,8 @@ export default function FarmDetails() {
       const endDateString = endDate.toISOString().split('T')[0];
 
       const { data } = await axios.post(`${API_URL}/api/farms/book/${id}`, {
+        userId: currentUser._id,
+        userName: currentUser.name,
         from: fromDate,
         to: endDateString // اليوم التالي
       });
@@ -277,6 +279,8 @@ export default function FarmDetails() {
 
     try {
       const { data } = await axios.post(`${API_URL}/api/farms/book/${id}`, {
+        userId: currentUser._id,
+        userName: currentUser.name,
         from: fromDate,
         to: toDate
       });

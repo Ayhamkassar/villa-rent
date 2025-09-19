@@ -707,7 +707,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       return res.status(400).json({ message: 'تواريخ غير صحيحة' });
     }
-    if (fromDate >= toDate) {
+    if (fromDate > toDate) {
       return res.status(400).json({ message: 'تاريخ البداية يجب أن يكون قبل تاريخ النهاية' });
     }
 
@@ -752,7 +752,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
     //   $push: { bookings: newBooking._id }
     // });
 
-    res.json({ message: 'تم الحجز بنجاح', booking: newBooking });
+    res.json({ message: 'تم الحجز بنجاح', booking: newBooking, totalPrice });
   } catch (err) {
     console.error('خطأ في حجز المزرعة:', err);
     res.status(500).json({ 
