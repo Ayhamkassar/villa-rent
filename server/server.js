@@ -690,16 +690,33 @@ app.post('/api/users/upload/:id', upload.single('profileImage'), async (req, res
 
 app.post('/api/farms/book/:id', async (req, res) => {
   try {
+    console.log("Entered")
     const { userId, userName, from, to } = req.body;
+    
+    // التحقق من البيانات المطلوبة
+    if (!userId || !userName || !from || !to) {
+      return res.status(400).json({ message: 'يرجى إدخال جميع البيانات المطلوبة' });
+    }
+    
     const farm = await Farm.findById(req.params.id);
     if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
+
+    // التحقق من صحة التواريخ
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      return res.status(400).json({ message: 'تواريخ غير صحيحة' });
+    }
+    if (fromDate >= toDate) {
+      return res.status(400).json({ message: 'تاريخ البداية يجب أن يكون قبل تاريخ النهاية' });
+    }
 
     // التحقق من التداخل - البحث في جدول bookings المنفصل
     const existingBookings = await bookings.find({ farmId: farm._id });
     const isOverlap = existingBookings.some(b => {
       const bStart = new Date(b.from);
       const bEnd = new Date(b.to);
-      return (new Date(from) < bEnd && new Date(to) > bStart);
+      return (fromDate < bEnd && toDate > bStart);
     });
     if (isOverlap) {
       return res.status(400).json({ message: 'التواريخ محجوزة مسبقاً' });
@@ -707,13 +724,13 @@ app.post('/api/farms/book/:id', async (req, res) => {
 
     // حساب السعر
     let totalPrice = 0;
-    let current = new Date(from);
-    while (current < new Date(to)) { // تغيير <= إلى < لتجنب حساب يوم إضافي
+    let current = new Date(fromDate);
+    while (current < toDate) { // تغيير <= إلى < لتجنب حساب يوم إضافي
       const day = current.getDay();
       if (day === 4 || day === 5 || day === 6) {
-        totalPrice += farm.weekendPrice;
+        totalPrice += Number(farm.weekendPrice || 0);
       } else {
-        totalPrice += farm.midweekPrice;
+        totalPrice += Number(farm.midweekPrice || 0);
       }
       current.setDate(current.getDate() + 1);
     }
@@ -723,8 +740,8 @@ app.post('/api/farms/book/:id', async (req, res) => {
       farmId: farm._id,
       userId,
       userName,
-      from,
-      to,
+      from: fromDate,
+      to: toDate,
       totalPrice,
       status: 'pending'
     });
@@ -737,8 +754,12 @@ app.post('/api/farms/book/:id', async (req, res) => {
 
     res.json({ message: 'تم الحجز بنجاح', booking: newBooking });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'خطأ في السيرفر' });
+    console.error('خطأ في حجز المزرعة:', err);
+    res.status(500).json({ 
+      message: 'خطأ في السيرفر', 
+      error: err.message,
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 });
 
@@ -773,12 +794,22 @@ app.get('/api/users/:id', async (req, res) => {
 // =====================
 app.get('/api/bookings/:farmId', async (req, res) => {
   try {
-    const farmBookings = await bookings.find({ farmId: req.params.farmId })
+    const { farmId } = req.params;
+    
+    // التحقق من صحة farmId
+    if (!farmId || !mongoose.Types.ObjectId.isValid(farmId)) {
+      return res.status(400).json({ message: 'معرف المزرعة غير صحيح' });
+    }
+    
+    const farmBookings = await bookings.find({ farmId })
       .populate('userId', 'name email');
     res.json(farmBookings);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'خطأ في السيرفر' });
+    console.error('خطأ في جلب الحجوزات:', err);
+    res.status(500).json({ 
+      message: 'خطأ في السيرفر', 
+      error: err.message 
+    });
   }
 });
 
@@ -825,8 +856,26 @@ app.put('/api/users/:id', async (req, res) => {
 app.put('/api/bookings/:bookingId/status', async (req, res) => {
   try {
     const { status } = req.body;
+    const { bookingId } = req.params;
+    
+    // التحقق من البيانات المطلوبة
+    if (!status) {
+      return res.status(400).json({ message: 'يرجى إدخال حالة الحجز' });
+    }
+    
+    // التحقق من صحة bookingId
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ message: 'معرف الحجز غير صحيح' });
+    }
+    
+    // التحقق من صحة الحالة
+    const validStatuses = ['pending', 'confirmed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'حالة الحجز غير صحيحة' });
+    }
+    
     const booking = await bookings.findByIdAndUpdate(
-      req.params.bookingId,
+      bookingId,
       { status },
       { new: true }
     ).populate('userId', 'name email');
@@ -837,8 +886,11 @@ app.put('/api/bookings/:bookingId/status', async (req, res) => {
     
     res.json({ message: 'تم تحديث حالة الحجز', booking });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'خطأ في السيرفر' });
+    console.error('خطأ في تحديث حالة الحجز:', err);
+    res.status(500).json({ 
+      message: 'خطأ في السيرفر', 
+      error: err.message 
+    });
   }
 });
 // =====================
@@ -882,11 +934,29 @@ app.delete('/api/users/:id', verifyAdmin, async (req, res) => {
 app.post('/api/farms/quote/:id', async (req, res) => {
   try {
     const { from, to } = req.body;
-    const farm = await Farm.findById(req.params.id);
+    const { id } = req.params;
+    
+    // التحقق من البيانات المطلوبة
+    if (!from || !to) {
+      return res.status(400).json({ message: 'يرجى إدخال تواريخ البداية والنهاية' });
+    }
+    
+    // التحقق من صحة farmId
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'معرف المزرعة غير صحيح' });
+    }
+    
+    const farm = await Farm.findById(id);
     if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
 
     const start = new Date(from);
     const end   = new Date(to);
+    
+    // التحقق من صحة التواريخ
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ message: 'تواريخ غير صحيحة' });
+    }
+    
     if (!(start < end)) {
       return res.status(400).json({ message: 'تاريخ النهاية يجب أن يكون بعد البداية' });
     }
@@ -916,8 +986,11 @@ app.post('/api/farms/quote/:id', async (req, res) => {
 
     res.json({ totalPrice });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'خطأ في السيرفر' });
+    console.error('خطأ في حساب السعر:', err);
+    res.status(500).json({ 
+      message: 'خطأ في السيرفر', 
+      error: err.message 
+    });
   }
 });
 // =====================
@@ -928,19 +1001,37 @@ app.put('/api/farms/:farmId/bookings/:bookingId/status', async (req, res) => {
     const { farmId, bookingId } = req.params;
     const { status } = req.body; // ex: "cancelled" or "confirmed"
 
+    // التحقق من البيانات المطلوبة
+    if (!status) {
+      return res.status(400).json({ message: 'يرجى إدخال حالة الحجز' });
+    }
+    
+    // التحقق من صحة farmId
+    if (!farmId || !mongoose.Types.ObjectId.isValid(farmId)) {
+      return res.status(400).json({ message: 'معرف المزرعة غير صحيح' });
+    }
+    
+    // التحقق من صحة bookingId
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ message: 'معرف الحجز غير صحيح' });
+    }
+
     const farm = await Farm.findById(farmId);
     if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
 
-    const booking = bookings.id(bookingId);
+    const booking = await bookings.findById(bookingId);
     if (!booking) return res.status(404).json({ message: 'الحجز غير موجود' });
 
     booking.status = status;
-    await farm.save();
+    await booking.save();
 
     res.json({ message: 'تم تحديث حالة الحجز', booking });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'خطأ في السيرفر' });
+    console.error('خطأ في تحديث حالة الحجز:', err);
+    res.status(500).json({ 
+      message: 'خطأ في السيرفر', 
+      error: err.message 
+    });
   }
 });
 // =====================

@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AnimatedScreen from "../../../components/AnimatedScreen";
 
 export default function MyVillas() {
   const router = useRouter();
@@ -114,17 +115,20 @@ export default function MyVillas() {
 
   if (loading && !refreshing) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#27ae60" />
-      </View>
+      <AnimatedScreen animationType="fadeIn" duration={300}>
+        <View style={[styles.container, styles.center]}>
+          <ActivityIndicator size="large" color="#27ae60" />
+        </View>
+      </AnimatedScreen>
     );
   }
 
   return (
-    <LinearGradient
-      colors={["#74ebd5", "#ACB6E5"]}
-      style={styles.background}
-    >
+    <AnimatedScreen animationType="slideInLeft" duration={500}>
+      <LinearGradient
+        colors={["#74ebd5", "#ACB6E5"]}
+        style={styles.background}
+      >
       <View style={styles.overlay}>
         <FlatList
           data={farms}
@@ -143,7 +147,8 @@ export default function MyVillas() {
           }
         />
       </View>
-    </LinearGradient>
+      </LinearGradient>
+    </AnimatedScreen>
   );
 }
 

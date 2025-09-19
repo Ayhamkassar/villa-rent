@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
+import AnimatedScreen from '../../components/AnimatedScreen';
 
 export default function FarmDetails() {
   const { id } = useLocalSearchParams();
@@ -236,7 +237,7 @@ export default function FarmDetails() {
       endDate.setDate(endDate.getDate() + 1);
       const endDateString = endDate.toISOString().split('T')[0];
 
-      const { data } = await axios.post(`${API_URL}/api/farms/quote/${id}`, {
+      const { data } = await axios.post(`${API_URL}/api/farms/book/${id}`, {
         from: fromDate,
         to: endDateString // اليوم التالي
       });
@@ -275,10 +276,11 @@ export default function FarmDetails() {
     }
 
     try {
-      const { data } = await axios.post(`${API_URL}/api/farms/quote/${id}`, {
+      const { data } = await axios.post(`${API_URL}/api/farms/book/${id}`, {
         from: fromDate,
         to: toDate
       });
+      console.log(data)
       router.push({
         pathname: '../FarmDetails/ConfirmBooking',
         params: {
@@ -316,7 +318,8 @@ export default function FarmDetails() {
   }
 
   return (
-    <LinearGradient colors={['#a8edea', '#fed6e3']} style={styles.gradient}>
+    <AnimatedScreen animationType="slideInUp" duration={600}>
+      <LinearGradient colors={['#a8edea', '#fed6e3']} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backText}>رجوع</Text>
@@ -481,7 +484,8 @@ export default function FarmDetails() {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </LinearGradient>
+      </LinearGradient>
+    </AnimatedScreen>
   );
 }
 

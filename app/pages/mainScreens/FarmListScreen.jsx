@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AnimatedScreen from "../../../components/AnimatedScreen";
 
 const FarmListScreen = () => {
   const router = useRouter();
@@ -84,19 +85,22 @@ const FarmListScreen = () => {
 
   if (loading && !refreshing) {
     return (
-      <LinearGradient colors={["#74ebd5", "#ACB6E5"]} style={styles.container}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#27ae60" />
-        </View>
-      </LinearGradient>
+      <AnimatedScreen animationType="fadeIn" duration={300}>
+        <LinearGradient colors={["#74ebd5", "#ACB6E5"]} style={styles.container}>
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="#27ae60" />
+          </View>
+        </LinearGradient>
+      </AnimatedScreen>
     );
   }
 
   return (
-    <LinearGradient
-      colors={["#74ebd5", "#ACB6E5"]} // ✅ تدريج سماوي ↔ بنفسجي فاتح
-      style={styles.container}
-    >
+    <AnimatedScreen animationType="slideInUp" duration={500}>
+      <LinearGradient
+        colors={["#74ebd5", "#ACB6E5"]} // ✅ تدريج سماوي ↔ بنفسجي فاتح
+        style={styles.container}
+      >
       <View style={styles.overlay}>
         {/* مربع البحث + زر بحث */}
         <View style={styles.searchRow}>
@@ -153,7 +157,8 @@ const FarmListScreen = () => {
           }
         />
       </View>
-    </LinearGradient>
+      </LinearGradient>
+    </AnimatedScreen>
   );
 };
 

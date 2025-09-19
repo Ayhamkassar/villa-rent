@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AnimatedScreen from '../../../components/AnimatedScreen';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -152,29 +153,34 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1E90FF" />
-        <Text>جاري التحميل...</Text>
-      </View>
+      <AnimatedScreen animationType="fadeIn" duration={300}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#1E90FF" />
+          <Text>جاري التحميل...</Text>
+        </View>
+      </AnimatedScreen>
     );
   }
 
   if (!userId) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.infoText}>أنت غير مسجل دخول</Text>
-        <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/pages/Login/Login')}>
-          <Text style={styles.loginBtnText}>تسجيل الدخول</Text>
-        </TouchableOpacity>
-      </View>
+      <AnimatedScreen animationType="scaleIn" duration={400}>
+        <View style={styles.centered}>
+          <Text style={styles.infoText}>أنت غير مسجل دخول</Text>
+          <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/pages/Login/Login')}>
+            <Text style={styles.loginBtnText}>تسجيل الدخول</Text>
+          </TouchableOpacity>
+        </View>
+      </AnimatedScreen>
     );
   }
 
   return (
-    <LinearGradient
-      colors={['#74ebd5', '#ACB6E5']}
-      style={{ flex: 1 }}
-    >
+    <AnimatedScreen animationType="slideInRight" duration={600}>
+      <LinearGradient
+        colors={['#74ebd5', '#ACB6E5']}
+        style={{ flex: 1 }}
+      >
       <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={
@@ -297,7 +303,8 @@ export default function ProfileScreen() {
           <Text style={styles.logoutBtnText}>تسجيل الخروج</Text>
         </TouchableOpacity>
       </ScrollView>
-    </LinearGradient>
+      </LinearGradient>
+    </AnimatedScreen>
   );
 }
 

@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AnimatedScreen from '../../../components/AnimatedScreen';
 
 export default function VillaDetails() {
   const { id } = useLocalSearchParams();
@@ -58,7 +59,8 @@ export default function VillaDetails() {
   const images = Array.isArray(villa?.images) ? villa.images : [];
 
   return (
-    <LinearGradient colors={['#a8edea', '#fed6e3']} style={styles.gradient}>
+    <AnimatedScreen animationType="fadeIn" duration={500}>
+      <LinearGradient colors={['#a8edea', '#fed6e3']} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
         {images.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
@@ -201,7 +203,8 @@ export default function VillaDetails() {
           )}
         </View>
       )}
-    </LinearGradient>
+      </LinearGradient>
+    </AnimatedScreen>
   );
 }
 
