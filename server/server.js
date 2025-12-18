@@ -28,8 +28,8 @@ app.use(bodyParser.json());
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.user,
-    pass: process.env.pass,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   }
 });
 // =====================
@@ -77,10 +77,11 @@ app.post('/api/forgot-password', async (req, res) => {
 
     // إعداد الرسالة
     const mailOptions = {
-      from: 'myvilla234@gmail.com',
+      from: process.env.EMAIL_USER,
       to: email,
       subject: 'إعادة تعيين كلمة المرور',
-      text: `مرحبا ${user.name || ''},\n\nرمز إعادة تعيين كلمة المرور الخاص بك هو:\n\n${resetToken}\n\nصالح لمدة 15 دقيقة.\n\nإذا لم تطلب إعادة تعيين كلمة المرور، تجاهل هذه الرسالة.`
+      text: `مرحبا ${user.name || ''},\n\nرمز إعادة تعيين كلمة المرور الخاص بك هو:\n\n${resetToken}\n\nصالح لمدة 15 دقيقة.\n\nإذا لم تطلب إعادة تعيين كلمة المرور، تجاهل هذه الرسالة.`,
+      html: `<div style=\"font-family:Arial,sans-serif;background:#f9f9f9;padding:15px\">\n<h2>مرحباً ${user.name || ''}</h2>\n<p>رمز إعادة تعيين كلمة المرور الخاص بك هو:</p>\n<div style=\"font-size:24px;font-weight:bold;color:#31708f;margin:10px 0\">${resetToken}</div>\n<p>صالح لمدة 15 دقيقة.</p>\n<p>إذا لم تطلب هذا، تجاهل هذه الرسالة.</p>\n</div>`
     };
 // =====================
 //إرسال البريد
@@ -132,11 +133,20 @@ app.post('/api/resend-activation', async (req, res) => {
 
     // إعداد الرسالة
     const mailOptions = {
-      from: process.env.user || 'myvilla234@gmail.com',
+      from: process.env.EMAIL_USER,
       to: email,
-      subject: 'تفعيل الحساب - رمز جديد',
-      text: `مرحبا ${user.name},\n\nتم إرسال رمز تفعيل جديد لحسابك.\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\nالرابط صالح لمدة ساعة واحدة.\n\nإذا لم تطلب هذا الرمز، تجاهل هذه الرسالة.`
-    };
+      subject: 'إعادة تعيين كلمة المرور',
+      text: `مرحبا ...`, // fallback
+      html: `
+        <div style="font-family: Arial,sans-serif; background: #f9f9f9; padding: 15px">
+          <h2>مرحباً ${user.name || ''}</h2>
+          <p>رمز إعادة تعيين كلمة المرور الخاص بك هو:</p>
+          <div style="font-size: 24px; font-weight: bold; color: #31708f; margin: 10px 0">${resetToken}</div>
+          <p>صالح لمدة 15 دقيقة.</p>
+          <p>إذا لم تطلب هذا، تجاهل هذه الرسالة.</p>
+        </div>
+      `
+    }
 
     // إرسال البريد
     await new Promise((resolve, reject) => {
@@ -246,10 +256,11 @@ app.post('/api/register', async (req, res) => {
 
     // إعداد رسالة التفعيل
     const mailOptions = {
-      from: process.env.user || 'myvilla234@gmail.com',
+      from: process.env.EMAIL_USER,
       to: email,
       subject: 'تفعيل الحساب',
-      text: `مرحبا ${name},\n\nمرحباً بك في تطبيق فيلا رنت!\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\nالرابط صالح لمدة ساعة واحدة.\n\nإذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.`
+      text: `مرحبا ${name},\n\nمرحباً بك في تطبيق فيلا رنت!\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\nالرابط صالح لمدة ساعة واحدة.\n\nإذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.`,
+      html: `<div style=\"font-family:Arial,sans-serif;background:#f9f9f9;padding:15px\">\n<h2>مرحباً ${name}</h2>\n<p>مرحباً بك في تطبيق فيلا رنت!</p>\n<p><a href=\"https://api-villa-rent.onrender.com/api/verify/${verificationToken}\" style=\"color:#fff;background:#31708f;padding:10px 16px;border-radius:5px;text-decoration:none\">تفعيل الحساب</a></p>\n<p>الرابط صالح لمدة ساعة واحدة.</p>\n<p>إذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.</p>\n</div>`
     };
 
     // إرسال البريد

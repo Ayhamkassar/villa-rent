@@ -1,10 +1,10 @@
 import { API_URL } from '@/server/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { LinearGradient } from 'expo-linear-gradient'; // 👈
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
