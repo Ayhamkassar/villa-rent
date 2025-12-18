@@ -25,6 +25,22 @@ const FarmListScreen = () => {
   const [filter, setFilter] = useState("all"); // all | sale | rent
   const [search, setSearch] = useState("");   // نص البحث
 
+  // Auth check
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const userId = await AsyncStorage.getItem("userId");
+        if (!token || !userId) {
+          Alert.alert("تنبيه", "يرجى تسجيل الدخول");
+          router.replace("/pages/Login/Login");
+        }
+      } catch (e) {
+        router.replace("/pages/Login/Login");
+      }
+    })();
+  }, []);
+
   const fetchFarms = async () => {
     try {
       setLoading(true);

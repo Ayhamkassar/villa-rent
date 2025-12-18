@@ -12,20 +12,24 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
 
   const handleLogin = async () => {
     if (!email || !password) {
       return Alert.alert('خطأ', 'يرجى إدخال البريد وكلمة المرور');
     }
-
+  
     try {
+      setLoading(true);
+  
       const res = await axios.post(`${API_URL}/api/login`, { email, password });
       const { token, user } = res.data;
-
+  
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem('userId', user.id);
       await AsyncStorage.setItem('isAdmin', (user.isAdmin || false).toString());
-
+  
       if (user.isAdmin) {
         router.replace('/pages/Admin/villas/addVilla');
       } else {
@@ -33,9 +37,15 @@ const LoginScreen = () => {
       }
     } catch (err) {
       console.log(err.response?.data || err.message);
-      Alert.alert('خطأ', err.response?.data?.message || 'فشل تسجيل الدخول، تحقق من البريد وكلمة المرور.');
+      Alert.alert(
+        'خطأ',
+        err.response?.data?.message || 'فشل تسجيل الدخول، تحقق من البريد وكلمة المرور.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
+  
 
   return (
     <LinearGradient
@@ -68,9 +78,18 @@ const LoginScreen = () => {
           <Text style={styles.forgotLink}>نسيت كلمة المرور؟</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>دخول</Text>
-        </TouchableOpacity>
+        <TouchableOpacity
+  style={[styles.button, loading && { opacity: 0.7 }]}
+  onPress={handleLogin}
+  disabled={loading}
+>
+  {loading ? (
+    <ActivityIndicator size="small" color="#fff" />
+  ) : (
+    <Text style={styles.buttonText}>دخول</Text>
+  )}
+</TouchableOpacity>
+
 
         <TouchableOpacity onPress={() => router.push('/pages/Login/Register')}>
           <Text style={styles.link}>ليس لديك حساب؟ أنشئ واحد الآن</Text>
