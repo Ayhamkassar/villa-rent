@@ -4,7 +4,7 @@ import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AnimatedScreen from '../../../../components/AnimatedScreen';
 
 export default function VillaDetails() {
@@ -14,12 +14,13 @@ export default function VillaDetails() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [showBookings, setShowBookings] = useState(true);
 
+  // === جلب بيانات الفيلّا ===
   useEffect(() => {
     (async () => {
       try {
         const { data } = await axios.get(`${API_URL}/api/farms/${id}`);
-        
         setVilla(data);
       } catch (err) {
         Alert.alert('خطأ', 'تعذر تحميل بيانات المزرعة');
@@ -30,14 +31,22 @@ export default function VillaDetails() {
     })();
   }, [id]);
 
-  useEffect(() => {
-    if (!id) return;
-    
+  // === دالة جلب الحجوزات ===
+  const fetchBookings = async () => {
     setBookingsLoading(true);
-    axios.get(`${API_URL}/api/bookings/${id}`)
-      .then(res => setBookings(res.data))
-      .catch(() => setBookings([]))
-      .finally(() => setBookingsLoading(false));
+    try {
+      const res = await axios.get(`${API_URL}/api/bookings/${id}`);
+      setBookings(res.data);
+    } catch (err) {
+      console.log('Error fetching bookings:', err.message);
+      setBookings([]);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (id) fetchBookings();
   }, [id]);
 
   if (loading) {
@@ -51,7 +60,7 @@ export default function VillaDetails() {
   const images = Array.isArray(villa?.images) ? villa.images : [];
 
   return (
-    <AnimatedScreen animationType="scaleIn" duration={500}>
+    <AnimatedScreen animationType="fadeIn" duration={500}>
       <LinearGradient colors={['#a8edea', '#fed6e3']} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
         {images.length > 0 && (
@@ -70,6 +79,7 @@ export default function VillaDetails() {
         <Text style={styles.status}>الحالة: {villa?.status || '...'}</Text>
         <Text style={styles.type}>نوع المزرعة: {villa?.type === 'sale' ? 'بيع' : 'إيجار'}</Text>
         <Text style={styles.address}>العنوان: {villa?.address?.address || villa?.address || 'غير محدد'}</Text>
+        <Text style={styles.address}>رقم الهاتف: {villa?.contactNumber || '-'}</Text>
 
         <Text style={[styles.sectionTitle, { alignSelf: 'flex-end' }]}>التفاصيل الإضافية</Text>
         <View style={styles.extraDetails}>
@@ -120,42 +130,55 @@ export default function VillaDetails() {
               </View>
             </>
           )}
-        </View>
-      </ScrollView>
+        <TouchableOpacity
+        onPress={() => setShowBookings(v => !v)}
+          style={{
+              backgroundColor: '#0077b6',
+              padding: 10,
+              borderRadius: 8,
+              marginVertical: 10,
+              alignSelf: 'center'
+           }}
+        >
+        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+           {showBookings ? 'إخفاء الحجوزات' : 'إظهار الحجوزات'}
+        </Text>
+      </TouchableOpacity>
       {/* Bookings Section */}
-      {villa?.type === 'rent' && (
-  <View style={styles.bookingsSection}>
-    <Text style={styles.sectionTitle}>📅 الحجوزات</Text>
-
-    {bookingsLoading ? (
-      <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
-    ) : bookings.length === 0 ? (
-      <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
-    ) : (
-      bookings.map((booking, idx) => (
-        <View key={booking._id || idx} style={styles.bookingCard}>
-          <Text style={styles.bookingName}>
-            👤 الحجز بواسطة: {booking.userName || booking.user?.name || 'غير معروف'}
-          </Text>
-          <Text style={styles.bookingDate}>
-            🗓 من: {booking.from ? new Date(booking.from).toLocaleDateString('ar-SY') : '-'}
-            {"\n"}إلى: {booking.to ? new Date(booking.to).toLocaleDateString('ar-SY') : '-'}
-          </Text>
-          {booking.status && (
-            <Text style={[styles.bookingStatus, 
-              booking.status === 'confirmed' ? { color: 'green' } : 
-              booking.status === 'pending' ? { color: 'orange' } : { color: 'red' }
-            ]}>
-              الحالة: {booking.status === 'confirmed' ? 'مؤكد' : 
-                      booking.status === 'pending' ? 'في الانتظار' : 
-                      booking.status === 'cancelled' ? 'ملغي' : booking.status}
-            </Text>
+      {showBookings && villa?.type === 'rent' && (
+        <>
+        <ScrollView style={styles.bookingsSection}>
+          <Text style={styles.sectionTitle}>الحجوزات</Text>
+          {bookingsLoading ? (
+            <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
+          ) : bookings.length === 0 ? (
+            <Text style={styles.noBookingsText}>لا يوجد حجوزات لهذه المزرعة</Text>
+          ) : (
+            bookings.map((booking, idx) => (
+              <View key={booking._id || idx} style={styles.bookingItem}>
+                <Text style={styles.bookingText}>
+                  الحجز بواسطة: {booking.userName || booking.userId?.name || '-'}
+                </Text>
+                <Text style={styles.bookingText}>
+                  من: {booking.from ? new Date(booking.from).toLocaleDateString() : '-'} 
+                  إلى: {booking.to ? (() => { const d = new Date(booking.to); d.setDate(d.getDate() - 1); return d.toLocaleDateString(); })() : '-'}
+                </Text>
+                <Text style={[styles.bookingText, 
+                  booking.status === 'confirmed' ? { color: 'green' } : 
+                  booking.status === 'pending' ? { color: 'orange' } : { color: 'red' }
+                ]}>
+                  الحالة: {booking.status === 'confirmed' ? 'مؤكد' : 
+                          booking.status === 'pending' ? 'في الانتظار' : 
+                          booking.status === 'cancelled' ? 'ملغي' : booking.status}
+                </Text>
+              </View>
+            ))
           )}
-        </View>
-      ))
-    )}
-  </View>
-    )}
+        </ScrollView>
+      </>
+      )}
+      </View>
+      </ScrollView>
       </LinearGradient>
     </AnimatedScreen>
   );
@@ -188,21 +211,23 @@ const styles = StyleSheet.create({
   detailText: { fontSize: 16, color: '#0077b6' },
   backButton: { alignSelf: 'flex-start', backgroundColor: '#0077b6', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginBottom: 10 },
   backText: { color: '#fff', fontWeight: 'bold' },
-  bookingCard: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+  bookingsSection: { width: '100%', marginTop: 10, marginBottom: 30, backgroundColor: '#f0f4f8', borderRadius: 10, padding: 12 },
+  bookingItem: { borderBottomWidth: 1, borderColor: '#e0e0e0', paddingVertical: 8 },
+  bookingText: { fontSize: 15, color: '#333' },
+  noBookingsText: { color: '#888', textAlign: 'center', marginVertical: 10 },
+  confirmButton: {
+    backgroundColor: '#2a9d8f',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginRight: 8,
   },
-  bookingName: { fontSize: 16, fontWeight: '600', marginBottom: 4, color: '#0077b6' },
-  bookingDate: { fontSize: 15, color: '#333', marginBottom: 4 },
-  bookingStatus: { fontSize: 15, fontWeight: 'bold' },
-  
+  confirmButtonText: { color: '#fff', fontWeight: 'bold' },
+  cancelButton: {
+    backgroundColor: '#e63946',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  cancelButtonText: { color: '#fff', fontWeight: 'bold' }
 });
-
-

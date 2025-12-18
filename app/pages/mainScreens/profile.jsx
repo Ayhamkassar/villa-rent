@@ -1,5 +1,5 @@
 import { API_URL } from '@/server/config';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
@@ -195,8 +195,8 @@ export default function ProfileScreen() {
         }
       >
         {/* زر حول التطبيق */}
-        <TouchableOpacity style={styles.aboutBtn} onPress={() => router.push('/pages/About/About')}>
-          <Ionicons name="help-circle-outline" size={28} color="#1E90FF" />
+        <TouchableOpacity style={styles.aboutBtn} onPress={() => router.push('/pages/settings')}>
+          <MaterialCommunityIcons name="dots-vertical" size={28} color="#1E90FF" />
         </TouchableOpacity>
 
         {/* صورة البروفايل */}

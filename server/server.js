@@ -693,7 +693,6 @@ app.post('/api/farms/book/:id', async (req, res) => {
     console.log("Entered")
     const { userId, userName, from, to } = req.body;
     
-    // التحقق من البيانات المطلوبة
     if (!userId || !userName || !from || !to) {
       return res.status(400).json({ message: 'يرجى إدخال جميع البيانات المطلوبة' });
     }
@@ -701,7 +700,6 @@ app.post('/api/farms/book/:id', async (req, res) => {
     const farm = await Farm.findById(req.params.id);
     if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
 
-    // التحقق من صحة التواريخ
     const fromDate = new Date(from);
     const toDate = new Date(to);
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
@@ -712,7 +710,7 @@ app.post('/api/farms/book/:id', async (req, res) => {
     }
 
     // التحقق من التداخل - البحث في جدول bookings المنفصل
-    const existingBookings = await bookings.find({ farmId: farm._id });
+    const existingBookings = await bookings.find({ farmId: farm._id, status: { $ne: 'cancelled' } });
     const isOverlap = existingBookings.some(b => {
       const bStart = new Date(b.from);
       const bEnd = new Date(b.to);
@@ -962,7 +960,7 @@ app.post('/api/farms/quote/:id', async (req, res) => {
     }
 
     // البحث عن الحجوزات المتداخلة في قاعدة البيانات
-    const existingBookings = await bookings.find({ farmId: farm._id });
+    const existingBookings = await bookings.find({ farmId: farm._id, status: { $ne: 'cancelled' } });
     const isOverlap = existingBookings.some(b => {
       const bStart = new Date(b.from);
       const bEnd   = new Date(b.to);

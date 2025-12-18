@@ -14,6 +14,7 @@ export default function VillaDetails() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [showBookings, setShowBookings] = useState(true);
 
   // === جلب بيانات الفيلّا ===
   useEffect(() => {
@@ -129,12 +130,24 @@ export default function VillaDetails() {
               </View>
             </>
           )}
-        </View>
-      </ScrollView>
-
+        <TouchableOpacity
+        onPress={() => setShowBookings(v => !v)}
+          style={{
+              backgroundColor: '#0077b6',
+              padding: 10,
+              borderRadius: 8,
+              marginVertical: 10,
+              alignSelf: 'center'
+           }}
+        >
+        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+           {showBookings ? 'إخفاء الحجوزات' : 'إظهار الحجوزات'}
+        </Text>
+      </TouchableOpacity>
       {/* Bookings Section */}
-      {villa?.type === 'rent' && (
-        <View style={styles.bookingsSection}>
+      {showBookings && villa?.type === 'rent' && (
+        <>
+        <ScrollView style={styles.bookingsSection}>
           <Text style={styles.sectionTitle}>الحجوزات</Text>
           {bookingsLoading ? (
             <ActivityIndicator size="small" color="#0077b6" style={{ marginVertical: 10 }} />
@@ -148,7 +161,7 @@ export default function VillaDetails() {
                 </Text>
                 <Text style={styles.bookingText}>
                   من: {booking.from ? new Date(booking.from).toLocaleDateString() : '-'} 
-                  إلى: {booking.to ? new Date(booking.to).toLocaleDateString() : '-'}
+                  إلى: {booking.to ? (() => { const d = new Date(booking.to); d.setDate(d.getDate() - 1); return d.toLocaleDateString(); })() : '-'}
                 </Text>
                 <Text style={[styles.bookingText, 
                   booking.status === 'confirmed' ? { color: 'green' } : 
@@ -201,8 +214,11 @@ export default function VillaDetails() {
               </View>
             ))
           )}
-        </View>
+        </ScrollView>
+      </>
       )}
+      </View>
+      </ScrollView>
       </LinearGradient>
     </AnimatedScreen>
   );

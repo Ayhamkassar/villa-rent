@@ -1,5 +1,5 @@
 import { API_URL } from "@/server/config";
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -81,17 +81,29 @@ export default function FarmDetails() {
 
         // إضافة الأيام المحجوزة من الحجوزات المحجوزة
         farmBookings?.forEach(booking => {
+          // تجاهل الحجوزات الملغية
+          if (booking.status === 'cancelled') return;
+        
           const current = new Date(booking.from);
           const last = new Date(booking.to);
-
-          while (current <= last) {
+        
+          while (current < last) {
             const dateStr = current.toISOString().split('T')[0];
-            booked[dateStr] = {
-              disabled: true,
-              disableTouchEvent: true,
-              color: 'red',
-              textColor: 'white'
-            };
+            if (booking.status === 'confirmed') {
+              booked[dateStr] = {
+                disabled: true,
+                disableTouchEvent: true,
+                color: 'red', // مؤكد = أحمر
+                textColor: 'white'
+              };
+            } else if (booking.status === 'pending') {
+              booked[dateStr] = {
+                disabled: true,
+                disableTouchEvent: true,
+                color: 'gold', // قيد الانتظار = أصفر
+                textColor: 'black'
+              };
+            }
             current.setDate(current.getDate() + 1);
           }
         });
@@ -163,7 +175,7 @@ export default function FarmDetails() {
         const current = new Date(booking.from);
         const last = new Date(booking.to);
 
-        while (current <= last) {
+        while (current < last) { // use exclusive end to avoid painting checkout day
           const dateStr = current.toISOString().split('T')[0];
           booked[dateStr] = { disabled: true, disableTouchEvent: true, color: 'red', textColor: 'white' };
           current.setDate(current.getDate() + 1);
@@ -278,11 +290,16 @@ export default function FarmDetails() {
     }
 
     try {
+      // اجعل تاريخ النهاية حصرياً بإضافة يوم واحد لضمان احتساب آخر ليلة
+      const endDate = new Date(toDate);
+      endDate.setDate(endDate.getDate() + 1);
+      const endDateString = endDate.toISOString().split('T')[0];
+
       const { data } = await axios.post(`${API_URL}/api/farms/book/${id}`, {
         userId: currentUser._id,
         userName: currentUser.name,
         from: fromDate,
-        to: toDate
+        to: endDateString
       });
       console.log(data)
       router.push({
@@ -291,7 +308,7 @@ export default function FarmDetails() {
           farmId: farm._id,
           farmName: farm?.name,
           fromDate,
-          toDate,
+          toDate, // نعرض للمستخدم نهاية الفترة المختارة كما اختارها (شاملة)
           quote: data.totalPrice,
           userId: currentUser._id,
           userName: currentUser.name
@@ -325,9 +342,7 @@ export default function FarmDetails() {
     <AnimatedScreen animationType="slideInUp" duration={600}>
       <LinearGradient colors={['#a8edea', '#fed6e3']} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backText}>رجوع</Text>
-        </TouchableOpacity>
+
 
         {/* عرض الصور */}
         {farm?.images?.length > 0 && (
@@ -487,6 +502,13 @@ export default function FarmDetails() {
             <Text style={styles.bookButtonText}>تواصل</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Text style={styles.backButtonText}>رجوع</Text>
+        </TouchableOpacity>
       </ScrollView>
       </LinearGradient>
     </AnimatedScreen>
@@ -496,8 +518,6 @@ export default function FarmDetails() {
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { padding: 20, alignItems: 'center' },
-  backButton: { alignSelf: 'flex-start', backgroundColor: '#0077b6', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, marginBottom: 10 },
-  backText: { color: '#fff', fontWeight: 'bold' },
   imagesContainer: { marginBottom: 20 },
   image: {
     width: 300,
@@ -559,5 +579,22 @@ const styles = StyleSheet.create({
     color: 'white', 
     fontSize: 16, 
     fontWeight: 'bold' 
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0077b6',
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 30,
+    marginBottom: 10,
+    width: '100%'
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

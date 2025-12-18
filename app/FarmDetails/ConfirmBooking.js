@@ -16,10 +16,17 @@ export default function ConfirmBooking() {
     }
 
     try {
-      // إرسال طلب الحجز مرة واحدة فقط
+      // تأكيد الإرسال باستخدام نهاية حصرية (checkout) لضمان احتساب الليلة الأخيرة عند الإرسال من شاشة التأكيد أيضاً
+      const addDays = (dateStr, days) => {
+        const d = new Date(dateStr);
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+      };
+      const sendTo = toDate === fromDate ? addDays(fromDate, 1) : addDays(toDate, 1);
+
       await axios.post(`${API_URL}/api/farms/book/${farmId}`, {
         from: fromDate,
-        to: toDate,
+        to: sendTo,
         userId,
         userName,
       });
