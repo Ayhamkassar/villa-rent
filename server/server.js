@@ -1,1049 +1,280 @@
+// Load environment variables FIRST before anything else
+// Check both current directory (server/) and parent directory (project root)
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+// Fallback: also try .env in server directory
+if (!process.env.JWT_SECRET && !process.env.MONGO_URI) {
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const multer = require('multer');
-const User = require('./Models/User');
-const Farm = require('./Models/villa');
-const verifyAdmin = require('./middleware');
+const helmet = require('helmet');
 const bodyParser = require('body-parser');
-const nodemailer = require('nodemailer');
-const crypto = require('crypto');
-const bookings = require('./Models/bookings');
 
+// Security middleware
+const { sanitizeInput } = require('./middleware/sanitization');
+const {
+  generalLimiter
+} = require('./middleware/rateLimiting');
 
-dotenv.config();
+// Routes
+const authRoutes = require('./routes/auth');
+const farmRoutes = require('./routes/farm');
+const userRoutes = require('./routes/user');
+const bookingRoutes = require('./routes/booking');
+const farmBookingRoutes = require('./routes/farmBooking');
+const imageRoutes = require('./routes/image');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+
+// Store GridFS bucket in app.locals for controllers to access
+app.locals.gfsBucket = null;
+
+// Security: Helmet for comprehensive security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow images from other origins
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Allow images to be embedded
+}));
+
+// Security: Enhanced CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Default allowed origins including localhost for development
+    const defaultOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:8081',
+      'http://localhost:19006',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:8081',
+      'http://127.0.0.1:19006'
+    ];
+    
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? [...defaultOrigins, ...process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())]
+      : defaultOrigins;
+    
+    // In development or if '*' is in env, allow all; otherwise check whitelist
+    if (process.env.NODE_ENV !== 'production' || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count'],
+  maxAge: 86400 // 24 hours
+};
+app.use(cors(corsOptions));
+
+// Parse JSON bodies FIRST before sanitization
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bodyParser.json({ limit: '10mb' }));
+
+// Apply general rate limiting to all routes (after body parsing)
+app.use(generalLimiter);
+
+// Apply input sanitization to all routes (after body parsing)
+app.use(sanitizeInput);
 
 // =====================
-//إعداد SMTP
+// Validate Required Environment Variables
 // =====================
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+const envPath = path.join(__dirname, '../.env');
+const envExamplePath = path.join(__dirname, '../.env.example');
+
+// Check if .env file exists
+const envPathServer = path.join(__dirname, '.env'); // Also check server directory
+const envExists = fs.existsSync(envPath) || fs.existsSync(envPathServer);
+
+if (!envExists) {
+  console.warn('\n⚠️  WARNING: .env file not found!');
+  console.warn(`   Expected location: ${envPath}`);
+  console.warn(`   Alternative location: ${envPathServer}`);
+  console.warn('\n   Creating a template .env file...\n');
+  
+  // Create a basic .env file template
+  const envTemplate = `# Villa Rent API - Environment Variables
+# Required Variables
+MONGO_URI=mongodb://localhost:27017/villa-rent
+JWT_SECRET=
+
+# Optional Variables
+PORT=3000
+NODE_ENV=development
+RESEND_API_KEY=
+EMAIL_FROM=noreply@yourdomain.com
+BASE_URL=http://localhost:3000
+ALLOWED_ORIGINS=
+`;
+  
+  try {
+    fs.writeFileSync(envPath, envTemplate);
+    console.log(`✅ Created .env file at: ${envPath}`);
+    console.log('   ⚠️  Please edit the .env file and add your values!\n');
+  } catch (err) {
+    console.error(`   Could not create .env file: ${err.message}`);
+    console.warn(`   Please manually create .env at: ${envPath}\n`);
   }
-});
-// =====================
-// اتصال MongoDB
-// =====================
-const mongoURI = process.env.MONGO_URI;
+}
 
+// Validate JWT_SECRET
+if (!process.env.JWT_SECRET) {
+  console.error('\n❌ ERROR: JWT_SECRET is not set in .env file');
+  console.error('   This is required for authentication tokens.');
+  
+  // In development, generate a temporary secret (not for production!)
+  if (process.env.NODE_ENV !== 'production') {
+    const crypto = require('crypto');
+    const tempSecret = crypto.randomBytes(32).toString('hex');
+    process.env.JWT_SECRET = tempSecret;
+    console.warn(`   ⚠️  Using temporary JWT_SECRET for development: ${tempSecret.substring(0, 20)}...`);
+    console.warn('   ⚠️  WARNING: Set a proper JWT_SECRET in .env for production!\n');
+  } else {
+    console.error('   Please set JWT_SECRET in your .env file.');
+    console.error('   Example: JWT_SECRET=your_super_secret_key_here\n');
+    process.exit(1);
+  }
+}
+
+// Validate MONGO_URI
+const mongoURI = process.env.MONGO_URI;
 if (!mongoURI) {
-  console.error('MONGO_URI is not set. Create a .env file in the project root (villa-rent) and set MONGO_URI.');
+  console.error('\n❌ ERROR: MONGO_URI is not set in .env file');
+  console.error('   This is required to connect to MongoDB.');
+  console.error('   Example: MONGO_URI=mongodb://localhost:27017/villa-rent');
+  console.error('   Or MongoDB Atlas: MONGO_URI=mongodb+srv://user:password@cluster.mongodb.net/villa-rent\n');
   process.exit(1);
 }
 
-mongoose.connect(mongoURI);
+// MongoDB connection options for better reliability
+const mongooseOptions = {
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+  maxPoolSize: 10, // Maintain up to 10 socket connections
+  minPoolSize: 5, // Maintain at least 5 socket connections
+  retryWrites: true,
+  w: 'majority',
+  retryReads: true
+};
 
-const conn = mongoose.createConnection(mongoURI);
+// MongoDB connection with error handling
+mongoose.connect(mongoURI, mongooseOptions)
+  .then(() => {
+    console.log('MongoDB connected successfully');
+    // Initialize GridFS bucket after main connection is established
+    initializeGridFS();
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err.message);
+    if (err.message.includes('ECONNRESET') || err.message.includes('whitelist')) {
+      console.error('\n⚠️  Connection issue detected. Possible causes:');
+      console.error('   1. Your IP address is not whitelisted in MongoDB Atlas');
+      console.error('   2. Network connection issues');
+      console.error('   3. MongoDB Atlas cluster is down or unreachable');
+      console.error('\n   Check your MongoDB Atlas IP whitelist:');
+      console.error('   https://www.mongodb.com/docs/atlas/security-whitelist/');
+      console.error('\n   For development, you can temporarily allow all IPs (0.0.0.0/0)');
+      console.error('   ⚠️  WARNING: Only use 0.0.0.0/0 for development, not production!\n');
+    }
+    // Don't exit on connection error - allow server to start and retry
+    // The connection will retry automatically
+  });
 
-let gfsBucket;
-conn.once('open', () => {
-  gfsBucket = new mongoose.mongo.GridFSBucket(conn.db, { bucketName: 'uploads' });
+// Handle MongoDB connection events
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err.message);
 });
 
+mongoose.connection.on('disconnected', () => {
+  console.warn('MongoDB disconnected. Attempting to reconnect...');
+});
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-// =====================
-//EndPoint لإرسال رابط إعادة التعيين
-// =====================
-app.post('/api/forgot-password', async (req, res) => {
-  const { email } = req.body;
-
-  if (!email) return res.status(400).json({ message: 'يرجى إدخال البريد الإلكتروني' });
-
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
-
-    // توليد رمز مؤقت (Token)
-    const resetToken = Math.random().toString(36).substr(2, 8); // رمز 8 أحرف
-    const hashedToken = await bcrypt.hash(resetToken, 10);
-
-    // حفظ الرمز المؤقت في قاعدة البيانات مع تاريخ انتهاء الصلاحية (مثلاً 15 دقيقة)
-    user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 دقيقة
-    await user.save();
-
-    // إعداد الرسالة
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'إعادة تعيين كلمة المرور',
-      text: `مرحبا ${user.name || ''},\n\nرمز إعادة تعيين كلمة المرور الخاص بك هو:\n\n${resetToken}\n\nصالح لمدة 15 دقيقة.\n\nإذا لم تطلب إعادة تعيين كلمة المرور، تجاهل هذه الرسالة.`,
-      html: `<div style=\"font-family:Arial,sans-serif;background:#f9f9f9;padding:15px\">\n<h2>مرحباً ${user.name || ''}</h2>\n<p>رمز إعادة تعيين كلمة المرور الخاص بك هو:</p>\n<div style=\"font-size:24px;font-weight:bold;color:#31708f;margin:10px 0\">${resetToken}</div>\n<p>صالح لمدة 15 دقيقة.</p>\n<p>إذا لم تطلب هذا، تجاهل هذه الرسالة.</p>\n</div>`
-    };
-// =====================
-//إرسال البريد
-// =====================
-transporter.sendMail(mailOptions, (error, info) => {
-  if (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'حدث خطأ أثناء إرسال البريد' });
-  } else {
-    console.log('Email sent: ' + info.response);
-    res.json({ message: 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك' });
+mongoose.connection.on('reconnected', () => {
+  console.log('MongoDB reconnected successfully');
+  // Reinitialize GridFS after reconnection
+  if (!app.locals.gfsBucket) {
+    initializeGridFS();
   }
 });
 
-} catch (err) {
-console.error(err);
-res.status(500).json({ message: 'حدث خطأ في السيرفر' });
-}
-});
-// =====================
-// إعادة إرسال رمز التفعيل
-// =====================
-app.post('/api/resend-activation', async (req, res) => {
+// GridFS bucket initialization
+const initializeGridFS = () => {
   try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: 'يرجى إدخال البريد الإلكتروني' });
-    }
-
-    // البحث عن المستخدم
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'المستخدم غير موجود' });
-    }
-
-    // التحقق من حالة التفعيل
-    if (user.isVerified) {
-      return res.status(400).json({ message: 'الحساب مفعل بالفعل' });
-    }
-
-    // توليد رمز تفعيل جديد
-    const verificationToken = crypto.randomBytes(20).toString('hex');
-    
-    // تحديث المستخدم برمز التفعيل الجديد
-    user.verificationToken = verificationToken;
-    user.verificationExpires = Date.now() + 3600000; // ساعة واحدة
-    await user.save();
-
-    // إعداد الرسالة
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'إعادة تعيين كلمة المرور',
-      text: `مرحبا ...`, // fallback
-      html: `
-        <div style="font-family: Arial,sans-serif; background: #f9f9f9; padding: 15px">
-          <h2>مرحباً ${user.name || ''}</h2>
-          <p>رمز إعادة تعيين كلمة المرور الخاص بك هو:</p>
-          <div style="font-size: 24px; font-weight: bold; color: #31708f; margin: 10px 0">${resetToken}</div>
-          <p>صالح لمدة 15 دقيقة.</p>
-          <p>إذا لم تطلب هذا، تجاهل هذه الرسالة.</p>
-        </div>
-      `
-    }
-
-    // إرسال البريد
-    await new Promise((resolve, reject) => {
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error('خطأ في إرسال البريد:', error);
-          reject(error);
-        } else {
-          console.log('Email sent: ' + info.response);
-          resolve(info);
-        }
+    if (mongoose.connection.readyState === 1) { // 1 = connected
+      app.locals.gfsBucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, { 
+        bucketName: 'uploads' 
       });
-    });
-
-    res.json({ 
-      message: 'تم إرسال رمز التفعيل الجديد إلى بريدك الإلكتروني',
-      email: email
-    });
-
+      console.log('GridFS bucket initialized');
+    } else {
+      console.warn('GridFS initialization skipped - MongoDB not connected');
+    }
   } catch (err) {
-    console.error('خطأ في إعادة إرسال رمز التفعيل:', err);
-    res.status(500).json({ message: 'حدث خطأ أثناء إرسال رمز التفعيل' });
+    console.error('Error initializing GridFS:', err.message);
   }
-});
+};
 
 // =====================
-// تفعيل الحساب
+// API Routes
 // =====================
-app.get('/api/verify/:token', async (req, res) => {
-  try {
-    const user = await User.findOne({
-      verificationToken: req.params.token,
-      verificationExpires: { $gt: Date.now() }
-    });
+app.use('/api', authRoutes);
+app.use('/api/farms', farmRoutes);
+app.use('/api/farms', farmBookingRoutes); // Additional farm booking routes
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/images', imageRoutes);
 
-    if (!user) {
-      return res.status(400).json({ 
-        message: 'الرابط غير صالح أو انتهت صلاحيته' 
-      });
-    }
-
-    // تفعيل الحساب
-    user.isVerified = true;
-    user.verificationToken = null;
-    user.verificationExpires = null;
-    await user.save();
-
-    res.json({ 
-      message: 'تم تفعيل الحساب بنجاح',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        isVerified: user.isVerified
-      }
-    });
-
-  } catch (err) {
-    console.error('خطأ في تفعيل الحساب:', err);
-    res.status(500).json({ message: 'خطأ في السيرفر' });
-  }
-});
-// =====================
-// تسجيل مستخدم جديد
-// =====================
-app.post('/api/register', async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-
-    // التحقق من البيانات المطلوبة
-    if (!name || !email || !password) {
-      return res.status(400).json({ 
-        message: 'يرجى إدخال جميع البيانات المطلوبة' 
-      });
-    }
-
-    // التحقق من وجود المستخدم
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ 
-        message: 'البريد الإلكتروني مسجل مسبقاً' 
-      });
-    }
-
-    // التحقق من قوة كلمة المرور
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    if (!passwordRegex.test(password)) {
-      return res.status(400).json({
-        message: 'كلمة المرور يجب أن تكون 8 محارف على الأقل وتحتوي على حرف كبير وحرف صغير ورقم'
-      });
-    }
-
-    // توليد رمز التفعيل
-    const verificationToken = crypto.randomBytes(20).toString('hex');
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // إنشاء المستخدم الجديد
-    const newUser = new User({ 
-      name, 
-      email, 
-      password: hashedPassword,
-      isVerified: false,
-      verificationToken,
-      verificationExpires: Date.now() + 3600000 // ساعة واحدة
-    });
-    await newUser.save();
-
-    // إعداد رسالة التفعيل
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'تفعيل الحساب',
-      text: `مرحبا ${name},\n\nمرحباً بك في تطبيق فيلا رنت!\n\nاضغط الرابط لتفعيل حسابك:\nhttps://api-villa-rent.onrender.com/api/verify/${verificationToken}\n\nالرابط صالح لمدة ساعة واحدة.\n\nإذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.`,
-      html: `<div style=\"font-family:Arial,sans-serif;background:#f9f9f9;padding:15px\">\n<h2>مرحباً ${name}</h2>\n<p>مرحباً بك في تطبيق فيلا رنت!</p>\n<p><a href=\"https://api-villa-rent.onrender.com/api/verify/${verificationToken}\" style=\"color:#fff;background:#31708f;padding:10px 16px;border-radius:5px;text-decoration:none\">تفعيل الحساب</a></p>\n<p>الرابط صالح لمدة ساعة واحدة.</p>\n<p>إذا لم تنشئ هذا الحساب، تجاهل هذه الرسالة.</p>\n</div>`
-    };
-
-    // إرسال البريد
-    await new Promise((resolve, reject) => {
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error('خطأ في إرسال البريد:', error);
-          reject(error);
-        } else {
-          console.log('Email sent: ' + info.response);
-          resolve(info);
-        }
-      });
-    });
-
-    // إنشاء JWT token
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '1h' });
-
-    res.status(201).json({
-      message: 'تم إنشاء الحساب بنجاح. يرجى تفعيل حسابك عبر البريد الإلكتروني',
-      token,
-      user: { 
-        id: newUser._id, 
-        name: newUser.name, 
-        email: newUser.email,
-        isVerified: newUser.isVerified
-      }
-    });
-
-  } catch (err) {
-    console.error('خطأ في التسجيل:', err);
-    res.status(500).json({ message: 'حدث خطأ أثناء إنشاء الحساب' });
-  }
-});
-
-// =====================
-// التحقق من حالة التفعيل
-// =====================
-app.get('/api/check-verification/:email', async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'المستخدم غير موجود' });
-    }
-
-    res.json({
-      email: user.email,
-      isVerified: user.isVerified,
-      hasVerificationToken: !!user.verificationToken,
-      tokenExpires: user.verificationExpires
-    });
-
-  } catch (err) {
-    console.error('خطأ في التحقق من حالة التفعيل:', err);
-    res.status(500).json({ message: 'خطأ في السيرفر' });
-  }
-});
-// =====================
-//البحث و الفلترة
-// =====================
-app.get("/api/farms", async (req, res) => {
-  try {
-    const { type, search } = req.query;
-
-    let filter = {};
-
-    // فلترة حسب النوع
-    if (type && (type === "sale" || type === "rent")) {
-      filter.type = type;
-    }
-
-    // فلترة حسب نص البحث بالاسم
-    if (search && search.trim() !== "") {
-      filter.name = { $regex: search.trim(), $options: "i" }; // i => insensitive
-    }
-
-    const farms = await Farm.find(filter).sort({ createdAt: -1 });
-    res.json(farms);
-  } catch (error) {
-    console.error("Error fetching farms:", error);
-    res.status(500).json({ message: "فشل في تحميل المزارع" });
-  }
-});
-// =====================
-// تسجيل دخول مستخدم
-// =====================
-app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(400).json({ message: 'البريد الإلكتروني غير موجود' });
-  }
-  if (!user.isVerified) {
-    return res.status(403).json({ message: 'الحساب غير مفعل، تحقق من بريدك' });
-  }
-
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return res.status(400).json({ message: 'كلمة المرور غير صحيحة' });
-  }
-
-  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-  res.json({
-    message: 'تم تسجيل الدخول بنجاح',
-    token,
-    user: { id: user._id, name: user.name, email: user.email, isAdmin: user.isAdmin },
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
-// =====================
-// إعادة تعيين كلمة المرور
-// =====================
-app.post('/api/reset-password', async (req, res) => {
-  const { email, token, newPassword } = req.body;
 
-  if (!email || !token || !newPassword) {
-    return res.status(400).json({ message: 'يرجى ملء جميع الحقول' });
-  }
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: 'Endpoint not found' });
+});
 
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
-
-    // تحقق من صلاحية الرمز
-    if (!user.resetPasswordToken || !user.resetPasswordExpires) {
-      return res.status(400).json({ message: 'لا يوجد رمز لإعادة تعيين كلمة المرور' });
-    }
-
-    if (Date.now() > user.resetPasswordExpires) {
-      return res.status(400).json({ message: 'انتهت صلاحية الرمز' });
-    }
-
-    const isMatch = await bcrypt.compare(token, user.resetPasswordToken);
-    if (!isMatch) return res.status(400).json({ message: 'الرمز غير صحيح' });
-
-    // تحديث كلمة المرور
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-
-    // مسح الرمز بعد التحديث
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-
-    await user.save();
-
-    res.json({ message: 'تم تحديث كلمة المرور بنجاح' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'حدث خطأ في السيرفر' });
-  }
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(err.status || 500).json({ 
+    message: err.message || 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 // =====================
-// إنشاء فيلا جديدة مع رفع صورها
+// Start Server
 // =====================
-app.post('/api/villa', upload.array('images', 10), async (req, res) => {
-  try {
-    const {
-      name, price, description, type, status, available, address,
-      guests, bedrooms, bathrooms, weekendPrice, midweekPrice, sizeInHectares, ownerId, contactNumber, startBookingTime, endBookingTime
-    } = req.body;
-
-    if (!name || !description) {
-      return res.status(400).json({ message: 'الرجاء تعبئة اسم ووصف المزرعة' });
-    }
-
-    let parsedAddress = {};
-    try {
-      parsedAddress = address ? JSON.parse(address) : {};
-    } catch (err) {
-      parsedAddress = { fullAddress: address || "" };
-    }
-
-    let imagesIds = [];
-    for (let file of req.files) {
-      const uploadStream = gfsBucket.openUploadStream(
-        Date.now() + '-' + file.originalname,
-        { contentType: file.mimetype }
-      );
-      uploadStream.end(file.buffer);
-    
-      await new Promise((resolve, reject) => {
-        uploadStream.on('finish', resolve);
-        uploadStream.on('error', reject);
-      });
-    
-      imagesIds.push(uploadStream.id);
-    }
-    
-    
-    
-
-    const newFarm = new Farm({
-      name,
-      price: price ? Number(price) : 0,
-      description,
-      type,
-      status: status || 'available',
-      available: available !== undefined ? available === 'true' : true,
-      address: parsedAddress,
-      images: imagesIds,
-      guests: guests ? Number(guests) : undefined,
-      bedrooms: bedrooms ? Number(bedrooms) : undefined,
-      bathrooms: bathrooms ? Number(bathrooms) : undefined,
-      weekendPrice: weekendPrice ? Number(weekendPrice) : undefined,
-      midweekPrice: midweekPrice ? Number(midweekPrice) : undefined,
-      sizeInHectares: type === 'sale' ? (sizeInHectares ? Number(sizeInHectares) : 0) : undefined,
-      ownerId: ownerId || null,
-      contactNumber: contactNumber || "",
-      startBookingTime: startBookingTime || "00:00",
-      endBookingTime: endBookingTime || "23:59"
-    });
-
-    await newFarm.save();
-    res.status(201).json({ message: 'تم إنشاء المزرعة بنجاح', farm: newFarm });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'حدث خطأ أثناء إنشاء المزرعة', error: error.message });
-  }
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
-// =====================
-// جلب كل الفيلات
-// =====================
-app.get('/api/farms', async (req, res) => {
-  try {
-    const farms = await Farm.find();
-    res.json(farms);
-  } catch (error) {
-    res.status(500).json({ message: 'حدث خطأ أثناء جلب المزارع' });
-  }
-});
-
-// =====================
-// جلب صورة عبر GridFS
-// =====================
-app.get('/api/images/:id', async (req, res) => {
-  try {
-    const _id = new mongoose.Types.ObjectId(req.params.id);
-    const downloadStream = gfsBucket.openDownloadStream(_id);
-    downloadStream.pipe(res);
-
-    downloadStream.on('error', () => {
-      res.status(404).json({ error: 'الصورة غير موجودة' });
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// =====================
-// جلب فيلا واحدة
-// =====================
-app.get('/api/farms/:id', async (req, res) => {
-  try {
-    const farm = await Farm.findById(req.params.id);
-    if (!farm) {
-      return res.status(404).json({ message: 'المزرعة غير موجودة' });
-    }
-    res.json(farm);
-  } catch (error) {
-    res.status(500).json({ message: 'حدث خطأ أثناء جلب بيانات المزرعة', error: error.message });
-  }
-});
-
-// =====================
-// تحديث بيانات فيلا (admin أو المالك فقط)
-// =====================
-app.put('/api/farms/:id', upload.array('images', 10), async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    if (!token) return res.status(401).json({ message: 'لا يوجد توكن' });
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return res.status(401).json({ message: 'توكن غير صالح' });
-    }
-
-    const user = await User.findById(decoded.userId);
-    if (!user) return res.status(401).json({ message: 'المستخدم غير موجود' });
-
-    const farm = await Farm.findById(req.params.id);
-    if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
-
-    const isOwner = String(farm.ownerId) === String(user._id);
-    if (!user.isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'غير مصرح' });
-    }
-
-    const {
-      name, price, description, type, status, available, address,
-      guests, bedrooms, bathrooms, weekendPrice, midweekPrice, sizeInHectares, contactNumber, ownerId
-    } = req.body;
-
-    // Parse address if provided
-    let parsedAddress = farm.address;
-    if (address !== undefined) {
-      try {
-        parsedAddress = address ? JSON.parse(address) : {};
-      } catch (err) {
-        parsedAddress = { fullAddress: address || '' };
-      }
-    }
-
-    // Handle new images if any
-    let imagesIds = farm.images;
-    if (req.files && req.files.length > 0) {
-      imagesIds = [];
-      for (let file of req.files) {
-        const uploadStream = gfsBucket.openUploadStream(
-          Date.now() + '-' + file.originalname,
-          { contentType: file.mimetype }
-        );
-        uploadStream.end(file.buffer);
-        await new Promise((resolve, reject) => {
-          uploadStream.on('finish', resolve);
-          uploadStream.on('error', reject);
-        });
-        imagesIds.push(uploadStream.id);
-      }
-    }
-
-    // Apply updates only for provided fields
-    if (name !== undefined) farm.name = name;
-    if (price !== undefined) farm.price = Number(price) || 0;
-    if (description !== undefined) farm.description = description;
-    if (type !== undefined) farm.type = type;
-    if (status !== undefined) farm.status = status;
-    if (available !== undefined) farm.available = available === 'true' || available === true;
-    if (address !== undefined) farm.address = parsedAddress;
-    if (imagesIds !== farm.images) farm.images = imagesIds;
-    if (guests !== undefined) farm.guests = Number(guests) || 0;
-    if (bedrooms !== undefined) farm.bedrooms = Number(bedrooms) || 0;
-    if (bathrooms !== undefined) farm.bathrooms = Number(bathrooms) || 0;
-    if (weekendPrice !== undefined) farm.weekendPrice = Number(weekendPrice) || 0;
-    if (midweekPrice !== undefined) farm.midweekPrice = Number(midweekPrice) || 0;
-    if (sizeInHectares !== undefined) farm.sizeInHectares = Number(sizeInHectares) || 0;
-    if (contactNumber !== undefined) farm.contactNumber = contactNumber;
-    if (ownerId !== undefined && user.isAdmin) farm.ownerId = ownerId; // only admin can reassign owner
-
-    await farm.save();
-    res.json({ message: 'تم تحديث المزرعة بنجاح', farm });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'حدث خطأ أثناء تحديث المزرعة', error: err.message });
-  }
-});
-
-// =====================
-// حذف فيلا (admin أو المالك فقط)
-// =====================
-app.delete('/api/farms/:id', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    if (!token) return res.status(401).json({ message: 'لا يوجد توكن' });
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return res.status(401).json({ message: 'توكن غير صالح' });
-    }
-
-    const user = await User.findById(decoded.userId);
-    if (!user) return res.status(401).json({ message: 'المستخدم غير موجود' });
-
-    const farm = await Farm.findById(req.params.id);
-    if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
-
-    const isOwner = String(farm.ownerId) === String(user._id);
-    if (!user.isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'غير مصرح' });
-    }
-
-    // حذف الصور من GridFS إن وجدت
-    if (Array.isArray(farm.images) && farm.images.length > 0 && gfsBucket) {
-      for (const fileId of farm.images) {
-        try {
-          await gfsBucket.delete(new mongoose.Types.ObjectId(fileId));
-        } catch (_) {
-          // تجاهل أخطاء حذف الصورة لتجنب فشل العملية كاملة
-        }
-      }
-    }
-
-    await Farm.findByIdAndDelete(farm._id);
-    res.json({ message: 'تم حذف المزرعة بنجاح' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'حدث خطأ أثناء حذف المزرعة', error: err.message });
-  }
-});
-
-// =====================
-// رفع صورة بروفايل مستخدم
-// =====================
-app.post('/api/users/upload/:id', upload.single('profileImage'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ message: 'لا يوجد ملف مرفوع' });
-
-    const uploadStream = gfsBucket.openUploadStream(
-      Date.now() + '-' + req.file.originalname,
-      { contentType: req.file.mimetype }
-    );
-    uploadStream.end(req.file.buffer);
-    const uploadedFile = await new Promise((resolve, reject) => {
-      uploadStream.on('finish', () => {
-        resolve(uploadStream.id); // ID من GridFS
-      });
-      uploadStream.on('error', reject);
-    });
-    
-    const imagePath = `/api/images/${uploadedFile}`; // استخدم uploadedFile مباشرة كـ ID
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { profileImage: imagePath },
-      { new: true }
-    ).select('-password');
-
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: 'حدث خطأ', error: err.message });
-  }
-});
-
-// =====================
-// حجز فيلا
-// =====================
-// POST /api/farms/book/:id
-
-app.post('/api/farms/book/:id', async (req, res) => {
-  try {
-    console.log("Entered")
-    const { userId, userName, from, to } = req.body;
-    
-    if (!userId || !userName || !from || !to) {
-      return res.status(400).json({ message: 'يرجى إدخال جميع البيانات المطلوبة' });
-    }
-    
-    const farm = await Farm.findById(req.params.id);
-    if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
-
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-      return res.status(400).json({ message: 'تواريخ غير صحيحة' });
-    }
-    if (fromDate > toDate) {
-      return res.status(400).json({ message: 'تاريخ البداية يجب أن يكون قبل تاريخ النهاية' });
-    }
-
-    // التحقق من التداخل - البحث في جدول bookings المنفصل
-    const existingBookings = await bookings.find({ farmId: farm._id, status: { $ne: 'cancelled' } });
-    const isOverlap = existingBookings.some(b => {
-      const bStart = new Date(b.from);
-      const bEnd = new Date(b.to);
-      return (fromDate < bEnd && toDate > bStart);
-    });
-    if (isOverlap) {
-      return res.status(400).json({ message: 'التواريخ محجوزة مسبقاً' });
-    }
-
-    // حساب السعر
-    let totalPrice = 0;
-    let current = new Date(fromDate);
-    while (current < toDate) { // تغيير <= إلى < لتجنب حساب يوم إضافي
-      const day = current.getDay();
-      if (day === 4 || day === 5 || day === 6) {
-        totalPrice += Number(farm.weekendPrice || 0);
-      } else {
-        totalPrice += Number(farm.midweekPrice || 0);
-      }
-      current.setDate(current.getDate() + 1);
-    }
-
-    // إنشاء الحجز في جدول bookings المنفصل
-    const newBooking = new bookings({
-      farmId: farm._id,
-      userId,
-      userName,
-      from: fromDate,
-      to: toDate,
-      totalPrice,
-      status: 'pending'
-    });
-    await newBooking.save();
-
-    // إزالة هذا الجزء - لا نحتاج لإضافة الحجز إلى المزرعة
-    // await Farm.findByIdAndUpdate(farm._id, {
-    //   $push: { bookings: newBooking._id }
-    // });
-
-    res.json({ message: 'تم الحجز بنجاح', booking: newBooking, totalPrice });
-  } catch (err) {
-    console.error('خطأ في حجز المزرعة:', err);
-    res.status(500).json({ 
-      message: 'خطأ في السيرفر', 
-      error: err.message,
-      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
-  }
-});
-
-
-
-// =====================
-// جلب جميع المستخدمين (admin فقط)
-// =====================
-app.get('/api/users', verifyAdmin, async (req, res) => {
-  try {
-    const users = await User.find().select('-password');
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// =====================
-// جلب بيانات مستخدم واحد
-// =====================
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id).select('-password');
-    if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-// =====================
-// جلب كل الحجوزات لمزرعة واحدة
-// =====================
-app.get('/api/bookings/:farmId', async (req, res) => {
-  try {
-    const { farmId } = req.params;
-    
-    // التحقق من صحة farmId
-    if (!farmId || !mongoose.Types.ObjectId.isValid(farmId)) {
-      return res.status(400).json({ message: 'معرف المزرعة غير صحيح' });
-    }
-    
-    const farmBookings = await bookings.find({ farmId })
-      .populate('userId', 'name email');
-    res.json(farmBookings);
-  } catch (err) {
-    console.error('خطأ في جلب الحجوزات:', err);
-    res.status(500).json({ 
-      message: 'خطأ في السيرفر', 
-      error: err.message 
-    });
-  }
-});
-
-// =====================
-// تحديث بيانات مستخدم (صاحب الحساب أو admin)
-// =====================
-app.put('/api/users/:id', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    if (!token) return res.status(401).json({ message: 'لا يوجد توكن' });
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch {
-      return res.status(401).json({ message: 'توكن غير صالح' });
-    }
-
-    const requester = await User.findById(decoded.userId);
-    if (!requester) return res.status(401).json({ message: 'المستخدم غير موجود' });
-
-    const targetId = req.params.id;
-    const isSelf = String(requester._id) === String(targetId);
-    if (!isSelf && !requester.isAdmin) {
-      return res.status(403).json({ message: 'غير مصرح' });
-    }
-
-    const updates = {};
-    if (req.body.name !== undefined) updates.name = String(req.body.name).trim();
-
-    const updated = await User.findByIdAndUpdate(targetId, updates, { new: true }).select('-password');
-    if (!updated) return res.status(404).json({ message: 'المستخدم غير موجود' });
-
-    res.json(updated);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'حدث خطأ أثناء تحديث المستخدم' });
-  }
-});
-// =====================
-// تعديل حالة الحجز
-// =====================
-app.put('/api/bookings/:bookingId/status', async (req, res) => {
-  try {
-    const { status } = req.body;
-    const { bookingId } = req.params;
-    
-    // التحقق من البيانات المطلوبة
-    if (!status) {
-      return res.status(400).json({ message: 'يرجى إدخال حالة الحجز' });
-    }
-    
-    // التحقق من صحة bookingId
-    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
-      return res.status(400).json({ message: 'معرف الحجز غير صحيح' });
-    }
-    
-    // التحقق من صحة الحالة
-    const validStatuses = ['pending', 'confirmed', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'حالة الحجز غير صحيحة' });
-    }
-    
-    const booking = await bookings.findByIdAndUpdate(
-      bookingId,
-      { status },
-      { new: true }
-    ).populate('userId', 'name email');
-    
-    if (!booking) {
-      return res.status(404).json({ message: 'الحجز غير موجود' });
-    }
-    
-    res.json({ message: 'تم تحديث حالة الحجز', booking });
-  } catch (err) {
-    console.error('خطأ في تحديث حالة الحجز:', err);
-    res.status(500).json({ 
-      message: 'خطأ في السيرفر', 
-      error: err.message 
-    });
-  }
-});
-// =====================
-// حذف حجز
-// =====================
-app.delete('/api/bookings/:bookingId', async (req, res) => {
-  try {
-    await bookings.findByIdAndDelete(req.params.bookingId);
-    res.json({ message: 'تم حذف الحجز' });
-  } catch (err) {
-    res.status(500).json({ message: 'خطأ في السيرفر' });
-  }
-});
-
-
-// =====================
-// حذف مستخدم (admin فقط)
-// =====================
-app.delete('/api/users/:id', verifyAdmin, async (req, res) => {
-  try {
-    const targetUserId = req.params.id;
-    if (String(req.user._id) === String(targetUserId)) {
-      return res.status(400).json({ message: 'لا يمكنك حذف حسابك الخاص' });
-    }
-
-    const user = await User.findByIdAndDelete(targetUserId);
-    if (!user) {
-      return res.status(404).json({ message: 'المستخدم غير موجود' });
-    }
-    res.json({ message: 'تم حذف المستخدم بنجاح' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'حدث خطأ أثناء حذف المستخدم', error: err.message });
-  }
-});
-
-// =====================
-// عرض السعر و التأكد من الحجز
-// =====================
-
-app.post('/api/farms/quote/:id', async (req, res) => {
-  try {
-    const { from, to } = req.body;
-    const { id } = req.params;
-    
-    // التحقق من البيانات المطلوبة
-    if (!from || !to) {
-      return res.status(400).json({ message: 'يرجى إدخال تواريخ البداية والنهاية' });
-    }
-    
-    // التحقق من صحة farmId
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'معرف المزرعة غير صحيح' });
-    }
-    
-    const farm = await Farm.findById(id);
-    if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
-
-    const start = new Date(from);
-    const end   = new Date(to);
-    
-    // التحقق من صحة التواريخ
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return res.status(400).json({ message: 'تواريخ غير صحيحة' });
-    }
-    
-    if (!(start < end)) {
-      return res.status(400).json({ message: 'تاريخ النهاية يجب أن يكون بعد البداية' });
-    }
-
-    // البحث عن الحجوزات المتداخلة في قاعدة البيانات
-    const existingBookings = await bookings.find({ farmId: farm._id, status: { $ne: 'cancelled' } });
-    const isOverlap = existingBookings.some(b => {
-      const bStart = new Date(b.from);
-      const bEnd   = new Date(b.to);
-      return start < bEnd && end > bStart;
-    });
-    if (isOverlap) {
-      return res.status(400).json({ message: 'التواريخ محجوزة مسبقاً' });
-    }
-
-    let totalPrice = 0;
-    const cursor = new Date(start);
-    while (cursor < end) {
-      const day = cursor.getDay();
-      if (day === 4 || day === 5 || day === 6) {
-        totalPrice += Number(farm.weekendPrice || 0);
-      } else {
-        totalPrice += Number(farm.midweekPrice || 0);
-      }
-      cursor.setDate(cursor.getDate() + 1);
-    }
-
-    res.json({ totalPrice });
-  } catch (err) {
-    console.error('خطأ في حساب السعر:', err);
-    res.status(500).json({ 
-      message: 'خطأ في السيرفر', 
-      error: err.message 
-    });
-  }
-});
-// =====================
-// تغيير حالة الحجز
-// =====================
-app.put('/api/farms/:farmId/bookings/:bookingId/status', async (req, res) => {
-  try {
-    const { farmId, bookingId } = req.params;
-    const { status } = req.body; // ex: "cancelled" or "confirmed"
-
-    // التحقق من البيانات المطلوبة
-    if (!status) {
-      return res.status(400).json({ message: 'يرجى إدخال حالة الحجز' });
-    }
-    
-    // التحقق من صحة farmId
-    if (!farmId || !mongoose.Types.ObjectId.isValid(farmId)) {
-      return res.status(400).json({ message: 'معرف المزرعة غير صحيح' });
-    }
-    
-    // التحقق من صحة bookingId
-    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
-      return res.status(400).json({ message: 'معرف الحجز غير صحيح' });
-    }
-
-    const farm = await Farm.findById(farmId);
-    if (!farm) return res.status(404).json({ message: 'المزرعة غير موجودة' });
-
-    const booking = await bookings.findById(bookingId);
-    if (!booking) return res.status(404).json({ message: 'الحجز غير موجود' });
-
-    booking.status = status;
-    await booking.save();
-
-    res.json({ message: 'تم تحديث حالة الحجز', booking });
-  } catch (err) {
-    console.error('خطأ في تحديث حالة الحجز:', err);
-    res.status(500).json({ 
-      message: 'خطأ في السيرفر', 
-      error: err.message 
-    });
-  }
-});
-// =====================
-// تشغيل السيرفر
-// =====================
-app.listen(3000, '0.0.0.0',() => console.log('Server running on port 3000'));
+module.exports = app;

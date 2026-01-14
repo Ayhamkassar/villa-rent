@@ -36,7 +36,7 @@ const FarmListScreen = () => {
           router.replace("/pages/Login/Login");
         }
       } catch (e) {
-        router.replace("/pages/Login/Login");
+        router.replace("/pages/mainScreens/FarmListScreen");
       }
     })();
   }, []);
