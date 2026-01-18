@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import AnimatedScreen from "../../../components/AnimatedScreen";
+import BottomNav from "../../../components/BottomNav";
 
 export default function MyVillas() {
   const router = useRouter();
@@ -38,7 +39,8 @@ export default function MyVillas() {
   const fetchFarms = useCallback(async (id) => {
     try {
       const res = await axios.get(`${API_URL}/api/farms`);
-      const myFarms = res.data.filter(
+      const allFarms = Array.isArray(res.data?.farms) ? res.data.farms : [];
+      const myFarms = allFarms.filter(
         (f) => f.ownerId === id || f.ownerId?._id === id
       );
       setFarms(myFarms);
@@ -147,6 +149,7 @@ export default function MyVillas() {
           }
         />
       </View>
+      <BottomNav />
       </LinearGradient>
     </AnimatedScreen>
   );
@@ -156,7 +159,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { justifyContent: "center", alignItems: "center" },
   background: { flex: 1 },
-  overlay: { flex: 1, padding: 15 },
+  overlay: { flex: 1, padding: 15, paddingBottom: 80 },
   listContent: { paddingBottom: 20 },
   card: {
     flexDirection: "row",

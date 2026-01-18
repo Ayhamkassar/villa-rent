@@ -1,4 +1,5 @@
 import { API_URL } from "@/server/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient"; // ✅ استيراد التدريج
 import { useRouter } from "expo-router";
@@ -16,6 +17,7 @@ import {
   View,
 } from "react-native";
 import AnimatedScreen from "../../../components/AnimatedScreen";
+import BottomNav from "../../../components/BottomNav";
 
 const FarmListScreen = () => {
   const router = useRouter();
@@ -36,7 +38,8 @@ const FarmListScreen = () => {
           router.replace("/pages/Login/Login");
         }
       } catch (e) {
-        router.replace("/pages/mainScreens/FarmListScreen");
+        console.error("Auth check failed:", e);
+        router.replace("/pages/Login/Login");
       }
     })();
   }, []);
@@ -50,7 +53,8 @@ const FarmListScreen = () => {
       if (search.trim() !== "") url += `search=${encodeURIComponent(search)}&`;
 
       const res = await axios.get(url);
-      setFarms(res.data);
+      const allFarms = Array.isArray(res.data?.farms) ? res.data.farms : [];
+      setFarms(allFarms);
     } catch (error) {
       console.error("Error fetching farms:", error);
       Alert.alert("خطأ", "فشل في تحميل المزارع");
@@ -173,6 +177,7 @@ const FarmListScreen = () => {
           }
         />
       </View>
+      <BottomNav />
       </LinearGradient>
     </AnimatedScreen>
   );
@@ -181,7 +186,7 @@ const FarmListScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  overlay: { flex: 1, padding: 15 },
+  overlay: { flex: 1, padding: 15, paddingBottom: 80 },
   listContent: { paddingBottom: 20 },
 
   searchRow: {

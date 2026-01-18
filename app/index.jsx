@@ -7,20 +7,41 @@ export default function Index() {
   const router = useRouter();
 
   useEffect(() => {
-    const checkRoleAndRedirect = async () => {
+    let isMounted = true;
+
+    const checkAuthAndRedirect = async () => {
       try {
+        // أولاً: التحقق هل يوجد توكن أم لا
+        const token = await AsyncStorage.getItem('token');
+        if (!isMounted) return;
+
+        // إذا لا يوجد توكن -> روح لصفحة تسجيل الدخول
+        if (!token) {
+          router.replace('/pages/Login/Login');
+          return;
+        }
+
+        // إذا في توكن -> شوف هل هو أدمن أم مستخدم عادي
         const isAdmin = await AsyncStorage.getItem('isAdmin');
+        if (!isMounted) return;
+
         if (isAdmin === 'true') {
           router.replace('/pages/Admin/villas/addVilla');
         } else {
           router.replace('/pages/mainScreens/FarmListScreen');
         }
       } catch (err) {
-        // fallback: go to FarmListScreen
-        router.replace('/pages/mainScreens/FarmListScreen');
+        if (!isMounted) return;
+        // في حالة حصل خطأ، رجّعه لصفحة تسجيل الدخول كخيار آمن
+        router.replace('/pages/Login/Login');
       }
     };
-    checkRoleAndRedirect();
+
+    checkAuthAndRedirect();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (

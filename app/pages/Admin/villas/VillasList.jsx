@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import BottomNav from "../../../../components/BottomNav";
 
 
 export default function VillasList() {
@@ -165,6 +166,7 @@ export default function VillasList() {
           }
         />
       </View>
+      <BottomNav />
       </LinearGradient>
   );
 }
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { justifyContent: "center", alignItems: "center" },
   background: { flex: 1, width: "100%", height: "100%" },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", padding: 15 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", padding: 15, paddingBottom: 80 },
   listContent: { paddingBottom: 20 },
   card: {
     flexDirection: "row",

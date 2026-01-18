@@ -57,14 +57,7 @@ const corsOptions = {
     
     // Default allowed origins including localhost for development
     const defaultOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:8081',
-      'http://localhost:19006',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
-      'http://127.0.0.1:8081',
-      'http://127.0.0.1:19006'
+      'https://api-villa-rent.onrender.com',
     ];
     
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
@@ -118,7 +111,7 @@ if (!envExists) {
   // Create a basic .env file template
   const envTemplate = `# Villa Rent API - Environment Variables
 # Required Variables
-MONGO_URI=mongodb://localhost:27017/villa-rent
+MONGO_URI=mongodb://https://api-villa-rent.onrender.com27017/villa-rent
 JWT_SECRET=
 
 # Optional Variables
@@ -126,7 +119,7 @@ PORT=3000
 NODE_ENV=development
 RESEND_API_KEY=
 EMAIL_FROM=noreply@yourdomain.com
-BASE_URL=http://localhost:3000
+BASE_URL=https://api-villa-rent.onrender.com3000
 ALLOWED_ORIGINS=
 `;
   
@@ -164,7 +157,7 @@ const mongoURI = process.env.MONGO_URI;
 if (!mongoURI) {
   console.error('\n❌ ERROR: MONGO_URI is not set in .env file');
   console.error('   This is required to connect to MongoDB.');
-  console.error('   Example: MONGO_URI=mongodb://localhost:27017/villa-rent');
+  console.error('   Example: MONGO_URI=mongodb://https://api-villa-rent.onrender.com27017/villa-rent');
   console.error('   Or MongoDB Atlas: MONGO_URI=mongodb+srv://user:password@cluster.mongodb.net/villa-rent\n');
   process.exit(1);
 }

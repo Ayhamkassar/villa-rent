@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@/server/config';
+import BottomNav from '../../../../components/BottomNav';
 
 export default function UsersScreen() {
   const router = useRouter();
@@ -99,6 +100,7 @@ export default function UsersScreen() {
           />
         }
       />
+      <BottomNav />
     </View>
   );
 }

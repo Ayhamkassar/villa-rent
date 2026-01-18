@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import BottomNav from "../../../../components/BottomNav";
 
 export default function AddFarm() {
   const [loading, setLoading] = useState(false);
@@ -195,7 +196,7 @@ export default function AddFarm() {
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ padding: 20 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 80 }}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.heading}>إضافة مزرعة جديدة 🌴</Text>
@@ -393,6 +394,7 @@ export default function AddFarm() {
           </TouchableOpacity>
         )}
       </ScrollView>
+      <BottomNav />
     </KeyboardAvoidingView>
   );
 }

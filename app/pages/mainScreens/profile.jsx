@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AnimatedScreen from '../../../components/AnimatedScreen';
+import BottomNav from '../../../components/BottomNav';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -142,7 +143,11 @@ export default function ProfileScreen() {
           text: 'تسجيل الخروج',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.clear();
+            try {
+              await AsyncStorage.multiRemove(['token', 'userId', 'isAdmin']);
+            } catch (e) {
+              console.warn('Error clearing auth data on logout', e);
+            }
             setUser(null);
             router.replace('/pages/Login/Login');
           },
@@ -182,7 +187,7 @@ export default function ProfileScreen() {
         style={{ flex: 1 }}
       >
       <ScrollView
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: 80 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -303,6 +308,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutBtnText}>تسجيل الخروج</Text>
         </TouchableOpacity>
       </ScrollView>
+      <BottomNav />
       </LinearGradient>
     </AnimatedScreen>
   );
