@@ -63,19 +63,6 @@ const register = async (req, res) => {
     // Generate verification token
     const verificationToken = crypto.randomBytes(20).toString('hex');
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Create new user
-    const newUser = new User({ 
-      name: sanitizedName, 
-      email: sanitizedEmail, 
-      password: hashedPassword,
-      isVerified: false,
-      verificationToken,
-      verificationExpires: Date.now() + 3600000 // 1 hour
-    });
-    await newUser.save();
-
-    // Send verification email
     const baseUrl = process.env.BASE_URL || 'https://api-villa-rent.onrender.com';
     await sendEmail({
       to: sanitizedEmail,
@@ -94,6 +81,20 @@ const register = async (req, res) => {
     
     // Create JWT token
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+
+    // Create new user
+    const newUser = new User({ 
+      name: sanitizedName, 
+      email: sanitizedEmail, 
+      password: hashedPassword,
+      isVerified: false,
+      verificationToken,
+      verificationExpires: Date.now() + 3600000 // 1 hour
+    });
+    await newUser.save();
+
+    // Send verification email
 
     res.status(201).json({
       message: 'تم إنشاء الحساب بنجاح. يرجى تفعيل حسابك عبر البريد الإلكتروني',

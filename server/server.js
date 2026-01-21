@@ -120,8 +120,7 @@ if (!envExists) {
 
 // Validate JWT_SECRET
 if (!process.env.JWT_SECRET) {
-  console.error('\n❌ ERROR: JWT_SECRET is not set in .env file');
-  console.error('   This is required for authentication tokens.');
+
   
   // In development, generate a temporary secret (not for production!)
   if (process.env.NODE_ENV !== 'production') {
@@ -139,13 +138,6 @@ if (!process.env.JWT_SECRET) {
 
 // Validate MONGO_URI
 const mongoURI = process.env.MONGO_URI;
-if (!mongoURI) {
-  console.error('\n❌ ERROR: MONGO_URI is not set in .env file');
-  console.error('   This is required to connect to MongoDB.');
-  console.error('   Example: MONGO_URI=mongodb://https://api-villa-rent.onrender.com27017/villa-rent');
-  console.error('   Or MongoDB Atlas: MONGO_URI=mongodb+srv://user:password@cluster.mongodb.net/villa-rent\n');
-  process.exit(1);
-}
 
 // MongoDB connection options for better reliability
 const mongooseOptions = {
