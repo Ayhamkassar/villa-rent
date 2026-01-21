@@ -2,7 +2,7 @@ const User = require('../Models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const sendEmail = require('../utils/SendEmail');
+const {sendEmail} = require('../utils/SendEmail.js');
 
 // Helper function to validate email
 const isValidEmail = (email) => {

@@ -108,21 +108,6 @@ if (!envExists) {
   console.warn(`   Alternative location: ${envPathServer}`);
   console.warn('\n   Creating a template .env file...\n');
   
-  // Create a basic .env file template
-  const envTemplate = `# Villa Rent API - Environment Variables
-# Required Variables
-MONGO_URI=mongodb://https://api-villa-rent.onrender.com27017/villa-rent
-JWT_SECRET=
-
-# Optional Variables
-PORT=3000
-NODE_ENV=development
-RESEND_API_KEY=
-EMAIL_FROM=noreply@yourdomain.com
-BASE_URL=https://api-villa-rent.onrender.com3000
-ALLOWED_ORIGINS=
-`;
-  
   try {
     fs.writeFileSync(envPath, envTemplate);
     console.log(`✅ Created .env file at: ${envPath}`);

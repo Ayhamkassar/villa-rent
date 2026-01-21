@@ -2,7 +2,6 @@ const nodemailer = require('nodemailer');
 
 let transporter = null;
 
-// Lazy initialization of SMTP transporter
 const getTransporter = () => {
   if (!transporter) {
     const smtpUser = process.env.SMTP_USER;
