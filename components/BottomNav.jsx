@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { View, TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePathname, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 /**
  * Bottom navigation bar.
@@ -46,7 +46,7 @@ export default function BottomNav() {
       key: "myVillas",
       label: "مزارعي",
       icon: "leaf-outline",
-      route: "/pages/mainScreens/MyVillas",
+      route: "/pages/mainScreens/MyVillasScreen",
     },
     {
       key: "profile",

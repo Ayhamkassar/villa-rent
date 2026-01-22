@@ -25,7 +25,18 @@ const userSchema = new mongoose.Schema({
   verificationToken: { type: String },
   verificationExpires: { type: Date },
   resetPasswordToken: { type: String},
-  resetPasswordExpires: { type: Date}  
+  resetPasswordExpires: { type: Date},
+  phone: {
+    type: String,
+    default: ""
+  },
+  
+  location: {
+    type: String,
+    default: ""
+  },
+  
+  
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

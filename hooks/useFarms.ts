@@ -1,24 +1,44 @@
 import { API_URL } from "@/server/config";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { Farm } from "../types/farms";
 
-export function useFarms() {
-  const [farms, setFarms] = useState<Farm[]>([]);
+export type FarmFilter = "all" | "sale" | "rent";
+
+export const useFarms = (
+  filter: FarmFilter,
+  search: string
+) => {
+  const [farms, setFarms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "sale" | "rent">("all");
-  const [search, setSearch] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchFarms = async () => {
-    setLoading(true);
-    let url = `${API_URL}/api/farms?`;
+    try {
+      setLoading(true);
 
-    if (filter !== "all") url += `type=${filter}&`;
-    if (search.trim()) url += `search=${search}`;
+      let url = `${API_URL}/api/farms?`;
 
-    const res = await axios.get(url);
-    setFarms(res.data?.farms || []);
-    setLoading(false);
+      if (filter !== "all") {
+        url += `type=${filter}&`;
+      }
+
+      if (search.trim() !== "") {
+        url += `search=${encodeURIComponent(search)}&`;
+      }
+
+      const res = await axios.get(url);
+      setFarms(Array.isArray(res.data?.farms) ? res.data.farms : []);
+    } catch (error) {
+      console.log("fetch farms error", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchFarms();
   };
 
   useEffect(() => {
@@ -28,10 +48,8 @@ export function useFarms() {
   return {
     farms,
     loading,
-    filter,
-    setFilter,
-    search,
-    setSearch,
+    refreshing,
     fetchFarms,
+    onRefresh, // ✅ موجود هون
   };
-}
+};

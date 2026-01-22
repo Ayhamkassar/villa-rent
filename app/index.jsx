@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function Index() {
@@ -17,7 +17,7 @@ export default function Index() {
 
         // إذا لا يوجد توكن -> روح لصفحة تسجيل الدخول
         if (!token) {
-          router.replace('/pages/Login/Login');
+          router.replace('/pages/Login/LoginScreen');
           return;
         }
 
@@ -33,7 +33,7 @@ export default function Index() {
       } catch (err) {
         if (!isMounted) return;
         // في حالة حصل خطأ، رجّعه لصفحة تسجيل الدخول كخيار آمن
-        router.replace('/pages/Login/Login');
+        router.replace('/pages/Login/LoginScreen');
       }
     };
 
