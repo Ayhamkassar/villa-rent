@@ -38,8 +38,6 @@ export default function MyVillasScreen() {
             refreshing={refreshing}
             onRefresh={onRefresh}
             renderItem={({ item }) =>{
-              console.log("Villa item:", item);
-
               return(
               <VillaCard
                 villa={item}

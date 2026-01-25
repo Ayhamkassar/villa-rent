@@ -2,7 +2,7 @@ import { FarmFilter } from "@/hooks/useFarms";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { FlatList, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, StyleSheet, TextInput, View, ActivityIndicator } from "react-native";
 import AnimatedScreen from "../../../components/AnimatedScreen";
 import BottomNav from "../../../components/BottomNav";
 import FarmCard from "../../../components/FarmCard";
@@ -13,15 +13,7 @@ export default function FarmListScreen() {
   const [filter, setFilter] = useState<FarmFilter>("all");
   const [search, setSearch] = useState("");
 
-  const {
-    farms,
-    loading,
-    refreshing,
-    fetchFarms,
-    onRefresh,
-  } = useFarms(filter, search);
-  
-    
+  const { farms, loading, refreshing, fetchFarms, onRefresh } = useFarms(filter, search);
 
   return (
     <AnimatedScreen animationType="slideInUp" duration={500}>
@@ -36,22 +28,27 @@ export default function FarmListScreen() {
             onSubmitEditing={onRefresh}
           />
 
-          {/* LIST */}
-          <FlatList
-            data={farms}
-            keyExtractor={(item) => item._id}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            renderItem={({ item }) => (
-              <FarmCard
-                farm={item}
-                onPress={() =>
-                  router.push(`/FarmDetails/${item._id}`)
-                }
-              />
-            )}
-            contentContainerStyle={{ paddingBottom: 120 }}
-          />
+          {/* LOADING INDICATOR */}
+          {loading ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color="#0000ff" />
+            </View>
+          ) : (
+            /* LIST */
+            <FlatList
+              data={farms}
+              keyExtractor={(item) => item._id}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              renderItem={({ item }) => (
+                <FarmCard
+                  farm={item}
+                  onPress={() => router.push(`/FarmDetails/${item._id}`)}
+                />
+              )}
+              contentContainerStyle={{ paddingBottom: 120 }}
+            />
+          )}
         </View>
 
         <BottomNav />
@@ -69,5 +66,11 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 16,
     fontSize: 16,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 50,
   },
 });

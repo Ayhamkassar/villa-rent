@@ -23,9 +23,6 @@ export function useMyVillas() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      console.log("Owner ID:", ownerId);
-      console.log("Farms from API:", res.data.farms);
-
       const myFarms = res.data.farms.filter((f: any) => {
         const farmOwnerId = typeof f.ownerId === "string" ? f.ownerId : f.ownerId?._id;
         return farmOwnerId?.toString() === ownerId?.toString();
@@ -33,7 +30,6 @@ export function useMyVillas() {
 
       setFarms(myFarms);
     } catch (err: any) {
-      console.log("Error fetching farms:", err.response || err.message);
       Alert.alert("خطأ", "فشل تحميل المزارع");
     } finally {
       setLoading(false);

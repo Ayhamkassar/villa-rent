@@ -54,7 +54,6 @@ export const AddFarmScreen: React.FC = () => {
 
     setIsSubmitting(true);
     setTimeout(() => {
-      console.log({ owner: selectedOwner, type: farmType, ...formData, images: selectedImages });
       setIsSubmitting(false);
       Alert.alert('تم', 'تم إضافة المزرعة بنجاح! ✓');
     }, 2000);

@@ -22,8 +22,10 @@ import {
 import { LanguageSelector } from '../../components/LanguageSelector';
 import { SettingsRow } from '../../components/SettingsRow';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export function SettingsScreen() {
+export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState<'ar' | 'en'>('ar');
 
@@ -65,7 +67,6 @@ export function SettingsScreen() {
   };
 
   const handleBack = () => {
-    // إذا تستخدم React Navigation، استخدم navigation.goBack()
     Alert.alert('رجوع', 'العودة للصفحة السابقة');
   };
 
@@ -155,7 +156,16 @@ export function SettingsScreen() {
       </ScrollView>
 
       {/* Back Button */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+      <TouchableOpacity style={styles.backButton} onPress={()=> {
+                const isAdmin = AsyncStorage.getItem('isAdmin');
+        if (!isAdmin){
+        router.replace('/pages/mainScreens/profile')
+        }
+        else
+        {
+        router.replace('/pages/Admin/profile')
+        }
+        }}>
         <ArrowRight width={20} height={20} color="#fff" />
         <Text style={styles.backButtonText}>رجوع</Text>
       </TouchableOpacity>
