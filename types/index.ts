@@ -9,14 +9,17 @@ export interface FarmFormData {
   name: string;
   address: string;
   contact: string;
-  size: string;
-  salePrice: string;
-  guests: string;
-  bedrooms: string;
-  bathrooms: string;
-  midweekPrice: string;
-  weekendPrice: string;
-  startTime: string;
-  endTime: string;
-  description: string;
+  size?: string;
+  salePrice?: string;
+  guests?: string;
+  bedrooms?: string;
+  bathrooms?: string;
+  midweekPrice?: string;
+  weekendPrice?: string;
+  startTime?: string;
+  endTime?: string;
+  description?: string;
+  ownerId: string;
+  type: FarmType;
+  images: string[];
 }
